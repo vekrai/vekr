@@ -1,5 +1,6 @@
 [tools]
 go = "1.27.3"
+gomigrate = "4.20.1"
 node = "26.13.0"
 
 [tasks.dev]
@@ -8,7 +9,7 @@ run = "go run ./cmd/server"
 
 [tasks."db:migrate"]
 description = "Run database migrations"
-run = "echo migrations not wired up yet"
+run = "migrate -path db/migrations -database \"postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOST}:5432/vekr_development?sslmode=disable\" up"
 
 [tasks."db:seed"]
 description = "Seed the database"
