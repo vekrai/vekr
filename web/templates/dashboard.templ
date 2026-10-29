@@ -36,7 +36,14 @@ templ dashboardContent(recentNotes []models.Node, nodeCount int64, chat models.C
 		<div class="flex flex-col gap-4">
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
-				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Chat with V</h2>
+				<div class="flex justify-between items-center mb-3.5">
+					<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary">Chat with V</h2>
+					if len(messages) > 0 {
+						<form method="POST" action={ templ.URL(fmt.Sprintf("/chat/%d/distill", chat.ID)) }>
+							<button class="text-xs text-ink-secondary hover:underline" type="submit">Save as note</button>
+						</form>
+					}
+				</div>
 				if len(messages) > 0 {
 					<div class="flex flex-col gap-2 mb-2.5 max-h-64 overflow-y-auto">
 						for i, m := range messages {

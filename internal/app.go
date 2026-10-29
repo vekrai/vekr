@@ -15,6 +15,7 @@ type App struct {
 	DB       *gorm.DB
 	Sessions *scs.SessionManager
 	Chat     *agent.ChatService
+	Distill  *agent.DistillService
 }
 
 func NewApp(db *gorm.DB) *App {
@@ -29,6 +30,7 @@ func NewApp(db *gorm.DB) *App {
 	tools := agent.NewToolRegistry(webSearch, webFetch, knowledge)
 
 	chat := agent.NewChatService(db, aiClient, tools)
+	distill := agent.NewDistillService(db, aiClient)
 
-	return &App{DB: db, Sessions: sessions, Chat: chat}
+	return &App{DB: db, Sessions: sessions, Chat: chat, Distill: distill}
 }
