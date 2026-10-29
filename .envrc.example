@@ -1,0 +1,4 @@
+export DATABASE_USERNAME="postgres"
+export DATABASE_PASSWORD=""
+export DATABASE_HOST="localhost"
+export APP_ENV="development"

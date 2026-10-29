@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"vekr/internal/config"
 )
 
 func main() {
@@ -15,7 +17,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Vekr is running.")
+		fmt.Fprintf(w, "Vekr is running. (%s, default env %s)\n", config.Env(), config.DefaultEnv)
 	})
 
 	addr := ":" + port

@@ -9,7 +9,7 @@ run = "go run ./cmd/server"
 
 [tasks."db:migrate"]
 description = "Run database migrations"
-run = "migrate -path db/migrations -database \"postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOST}:5432/vekr_development?sslmode=disable\" up"
+run = "migrate -path db/migrations -database \"postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOST}:5432/vekr_${APP_ENV:-development}?sslmode=disable\" up"
 
 [tasks."db:seed"]
 description = "Seed the database"
@@ -18,3 +18,4 @@ run = "go run ./cmd/seed"
 [tasks.test]
 description = "Run the test suite"
 run = "go test ./..."
+env = { APP_ENV = "test" }
