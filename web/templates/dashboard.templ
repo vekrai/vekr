@@ -6,11 +6,11 @@ import (
 	"vekr/internal/models"
 )
 
-templ Dashboard(recentNotes []models.Node, nodeCount int64, chat models.Chat, messages []models.ChatMessage) {
-	@layout(dashboardContent(recentNotes, nodeCount, chat, messages))
+templ Dashboard(recentNotes []models.Node, nodeCount int64, chat models.Chat, messages []models.ChatMessage, messageHTML []string) {
+	@layout(dashboardContent(recentNotes, nodeCount, chat, messages, messageHTML))
 }
 
-templ dashboardContent(recentNotes []models.Node, nodeCount int64, chat models.Chat, messages []models.ChatMessage) {
+templ dashboardContent(recentNotes []models.Node, nodeCount int64, chat models.Chat, messages []models.ChatMessage, messageHTML []string) {
 	<div class="grid md:grid-cols-[1.6fr_1fr] gap-4">
 
 		<div class="flex flex-col gap-4">
@@ -39,11 +39,15 @@ templ dashboardContent(recentNotes []models.Node, nodeCount int64, chat models.C
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Chat with V</h2>
 				if len(messages) > 0 {
 					<div class="flex flex-col gap-2 mb-2.5 max-h-64 overflow-y-auto">
-						for _, m := range messages {
+						for i, m := range messages {
 							if m.Role == "user" {
-								<div class="text-sm self-end max-w-[85%] bg-ink text-surface rounded-lg px-3 py-1.5">{ m.Content }</div>
+								<div class="text-sm self-end max-w-[85%] bg-ink text-surface rounded-lg px-3 py-1.5">
+									@templ.Raw(messageHTML[i])
+								</div>
 							} else {
-								<div class="text-sm self-start max-w-[85%] bg-page border border-black/10 rounded-lg px-3 py-1.5">{ m.Content }</div>
+								<div class="text-sm self-start max-w-[85%] bg-page border border-black/10 rounded-lg px-3 py-1.5">
+									@templ.Raw(messageHTML[i])
+								</div>
 							}
 						}
 					</div>

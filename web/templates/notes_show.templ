@@ -2,14 +2,16 @@ package templates
 
 import "vekr/internal/models"
 
-templ NotesShow(node models.Node) {
-	@layout(notesShowContent(node))
+templ NotesShow(node models.Node, contentHTML string) {
+	@layout(notesShowContent(node, contentHTML))
 }
 
-templ notesShowContent(node models.Node) {
+templ notesShowContent(node models.Node, contentHTML string) {
 	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
 		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ node.Title }</h2>
-		<p class="text-sm">{ node.Content }</p>
+		<div class="text-sm">
+			@templ.Raw(contentHTML)
+		</div>
 		<p class="text-xs text-ink-muted mt-2">{ node.CreatedAt.Format("Jan 2, 2006 15:04") }</p>
 		<a class="inline-block mt-2 text-xs text-accent hover:underline" href="/notes">Back to notes</a>
 	</div>
