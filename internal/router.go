@@ -3,13 +3,11 @@ package internal
 import (
 	"net/http"
 
-	"gorm.io/gorm"
-
 	"vekr/internal/handlers"
 )
 
-func NewRouter(db *gorm.DB) http.Handler {
-	notes := handlers.NewNotesHandler(db)
+func NewRouter(app *App) http.Handler {
+	notes := handlers.NewNotesHandler(app.DB)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
@@ -20,5 +18,5 @@ func NewRouter(db *gorm.DB) http.Handler {
 	mux.HandleFunc("GET /notes/{id}", notes.Show)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 
-	return mux
+	return Chain(mux, Recovery, Logging, app.Sessions.LoadAndSave)
 }

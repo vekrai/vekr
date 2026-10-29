@@ -16,7 +16,7 @@ func main() {
 		log.Fatalf("db connect: %v", err)
 	}
 
-	mux := app.NewRouter(db)
+	mux := app.NewRouter(app.NewApp(db))
 
 	port := os.Getenv("PORT")
 	if port == "" {
