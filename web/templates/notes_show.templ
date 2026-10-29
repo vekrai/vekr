@@ -1,0 +1,16 @@
+package templates
+
+import "vekr/internal/models"
+
+templ NotesShow(node models.Node) {
+	@layout(notesShowContent(node))
+}
+
+templ notesShowContent(node models.Node) {
+	<div class="card">
+		<h2>{ node.Title }</h2>
+		<p>{ node.Content }</p>
+		<p class="when">{ node.CreatedAt.Format("Jan 2, 2006 15:04") }</p>
+		<a class="link-btn" href="/notes">Back to notes</a>
+	</div>
+}

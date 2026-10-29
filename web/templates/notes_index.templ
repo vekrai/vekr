@@ -1,0 +1,36 @@
+package templates
+
+import (
+	"fmt"
+
+	"vekr/internal/models"
+)
+
+templ NotesIndex(nodes []models.Node) {
+	@layout(notesIndexContent(nodes))
+}
+
+templ notesIndexContent(nodes []models.Node) {
+	<div class="card">
+		<h2>Notes <span class="count">{ fmt.Sprintf("%d items", len(nodes)) }</span></h2>
+		if len(nodes) == 0 {
+			<p class="when">No notes yet.</p>
+		} else {
+			for _, node := range nodes {
+				<div class="capture-item">
+					<a class="capture-title" href={ templ.URL(fmt.Sprintf("/notes/%d", node.ID)) }>{ node.Title }</a>
+					<span class="when">{ node.CreatedAt.Format("Jan 2, 2006") }</span>
+				</div>
+			}
+		}
+	</div>
+
+	<div class="card">
+		<h2>New note</h2>
+		<form method="POST" action="/notes">
+			<input class="field" name="title" placeholder="Title" required/>
+			<textarea class="field" name="content" placeholder="Content" rows="4"></textarea>
+			<button class="btn-primary" type="submit">Create</button>
+		</form>
+	</div>
+}

@@ -1,0 +1,121 @@
+:root {
+  color-scheme: light;
+  --surface-1:      #fcfcfb;
+  --page-plane:     #f9f9f7;
+  --text-primary:   #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted:     #898781;
+  --gridline:       #e1e0d9;
+  --baseline:       #c3c2b7;
+  --border:         rgba(11,11,11,0.10);
+  --series-1:       color-mix(in srgb, #1baf7a 50%, #898781);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--page-plane);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+a { color: inherit; }
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 24px 60px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--text-primary);
+  color: var(--surface-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 17px;
+  flex: none;
+}
+
+.topbar-spacer { flex: 1; }
+
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+}
+
+.card h2 .count {
+  color: var(--text-muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 6px;
+}
+
+.capture-item {
+  font-size: 13px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gridline);
+  color: var(--text-secondary);
+}
+.capture-item:last-child { border-bottom: none; }
+.capture-title { color: var(--text-primary); }
+.capture-item .when { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+.field {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--page-plane);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.btn-primary {
+  background: var(--text-primary);
+  color: var(--surface-1);
+  border: none;
+  border-radius: 8px;
+  padding: 11px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-primary:hover { opacity: .85; }
+
+.link-btn {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--series-1);
+}
+
+.when { color: var(--text-muted); font-size: 12px; }
