@@ -1,5 +1,7 @@
 package ai
 
+import "os"
+
 type Config struct {
 	Name           string
 	BaseURL        string
@@ -13,4 +15,23 @@ func (c Config) maxTokensField() string {
 		return "max_tokens"
 	}
 	return c.MaxTokensField
+}
+
+func ConfigFromEnv() Config {
+	baseURL := os.Getenv("AI_BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:11434/v1"
+	}
+	model := os.Getenv("AI_MODEL")
+	if model == "" {
+		model = "qwen"
+	}
+
+	return Config{
+		Name:           "local-qwen",
+		BaseURL:        baseURL,
+		APIKey:         os.Getenv("AI_API_KEY"),
+		Model:          model,
+		MaxTokensField: os.Getenv("AI_MAX_TOKENS_FIELD"),
+	}
 }

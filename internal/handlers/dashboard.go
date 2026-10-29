@@ -5,16 +5,18 @@ import (
 
 	"gorm.io/gorm"
 
+	"vekr/internal/agent"
 	"vekr/internal/models"
 	"vekr/web/templates"
 )
 
 type DashboardHandler struct {
-	db *gorm.DB
+	db   *gorm.DB
+	chat *agent.ChatService
 }
 
-func NewDashboardHandler(db *gorm.DB) *DashboardHandler {
-	return &DashboardHandler{db: db}
+func NewDashboardHandler(db *gorm.DB, chat *agent.ChatService) *DashboardHandler {
+	return &DashboardHandler{db: db, chat: chat}
 }
 
 func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
@@ -30,5 +32,17 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	templates.Dashboard(recentNotes, nodeCount).Render(r.Context(), w)
+	chat, err := h.chat.CurrentChat()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	messages, err := h.chat.History(chat.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	templates.Dashboard(recentNotes, nodeCount, chat, messages).Render(r.Context(), w)
 }

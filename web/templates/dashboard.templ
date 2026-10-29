@@ -6,11 +6,11 @@ import (
 	"vekr/internal/models"
 )
 
-templ Dashboard(recentNotes []models.Node, nodeCount int64) {
-	@layout(dashboardContent(recentNotes, nodeCount))
+templ Dashboard(recentNotes []models.Node, nodeCount int64, chat models.Chat, messages []models.ChatMessage) {
+	@layout(dashboardContent(recentNotes, nodeCount, chat, messages))
 }
 
-templ dashboardContent(recentNotes []models.Node, nodeCount int64) {
+templ dashboardContent(recentNotes []models.Node, nodeCount int64, chat models.Chat, messages []models.ChatMessage) {
 	<div class="grid md:grid-cols-[1.6fr_1fr] gap-4">
 
 		<div class="flex flex-col gap-4">
@@ -37,13 +37,27 @@ templ dashboardContent(recentNotes []models.Node, nodeCount int64) {
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Chat with V</h2>
-				<div class="border border-black/10 rounded-lg bg-page p-2.5">
-					<textarea class="block w-full bg-transparent text-sm resize-none outline-none placeholder:text-ink-muted" placeholder="Talk, paste material, or drop a file…" rows="2" disabled></textarea>
-					<div class="flex justify-between items-center mt-1.5">
-						<span class="text-ink-muted text-sm">📎</span>
-						<button class="bg-ink/30 text-surface rounded-md py-1.5 px-3.5 text-sm font-semibold cursor-not-allowed" disabled>Send</button>
+				if len(messages) > 0 {
+					<div class="flex flex-col gap-2 mb-2.5 max-h-64 overflow-y-auto">
+						for _, m := range messages {
+							if m.Role == "user" {
+								<div class="text-sm self-end max-w-[85%] bg-ink text-surface rounded-lg px-3 py-1.5">{ m.Content }</div>
+							} else {
+								<div class="text-sm self-start max-w-[85%] bg-page border border-black/10 rounded-lg px-3 py-1.5">{ m.Content }</div>
+							}
+						}
 					</div>
-				</div>
+				}
+				<form method="POST" action="/chat/messages">
+					<input type="hidden" name="chat_id" value={ fmt.Sprintf("%d", chat.ID) }/>
+					<div class="border border-black/10 rounded-lg bg-page p-2.5">
+						<textarea class="block w-full bg-transparent text-sm resize-none outline-none placeholder:text-ink-muted" name="content" placeholder="Talk, paste material, or drop a file…" rows="2"></textarea>
+						<div class="flex justify-between items-center mt-1.5">
+							<span class="text-ink-muted text-sm">📎</span>
+							<button class="bg-ink text-surface rounded-md py-1.5 px-3.5 text-sm font-semibold" type="submit">Send</button>
+						</div>
+					</div>
+				</form>
 			</div>
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
