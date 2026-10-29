@@ -1,21 +1,25 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"gorm.io/gorm"
 
+	"vekr/internal/agent"
 	"vekr/internal/markdown"
 	"vekr/internal/models"
 	"vekr/web/templates"
 )
 
 type NotesHandler struct {
-	db *gorm.DB
+	db         *gorm.DB
+	curriculum *agent.CurriculumService
 }
 
-func NewNotesHandler(db *gorm.DB) *NotesHandler {
-	return &NotesHandler{db: db}
+func NewNotesHandler(db *gorm.DB, curriculum *agent.CurriculumService) *NotesHandler {
+	return &NotesHandler{db: db, curriculum: curriculum}
 }
 
 func (h *NotesHandler) Index(w http.ResponseWriter, r *http.Request) {
@@ -53,4 +57,19 @@ func (h *NotesHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/notes", http.StatusSeeOther)
+}
+
+func (h *NotesHandler) Promote(w http.ResponseWriter, r *http.Request) {
+	nodeID, err := strconv.ParseUint(r.PathValue("id"), 10, 64)
+	if err != nil {
+		http.Error(w, "invalid note id", http.StatusBadRequest)
+		return
+	}
+
+	if _, err := h.curriculum.PromoteToTopic(r.Context(), uint(nodeID)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/notes/%d", nodeID), http.StatusSeeOther)
 }

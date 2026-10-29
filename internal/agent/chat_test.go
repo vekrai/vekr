@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alexedwards/scs/v2"
 	"gorm.io/gorm"
 
 	"vekr/internal/ai"
@@ -22,7 +23,8 @@ func newChatService(t *testing.T, db *gorm.DB, handler http.HandlerFunc) *ChatSe
 
 	client := ai.NewClient(ai.Config{BaseURL: server.URL, Model: "test"}, nil)
 	knowledge := NewKnowledgeTools(db)
-	tools := NewToolRegistry(NewWebSearchTool("", nil), NewWebFetchTool(), knowledge)
+	curriculum := NewCurriculumTools(NewCurriculumService(db, client), scs.New())
+	tools := NewToolRegistry(NewWebSearchTool("", nil), NewWebFetchTool(), knowledge, curriculum)
 	return NewChatService(db, client, tools)
 }
 

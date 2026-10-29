@@ -8,7 +8,7 @@ import (
 
 func NewRouter(app *App) http.Handler {
 	dashboard := handlers.NewDashboardHandler(app.DB, app.Chat)
-	notes := handlers.NewNotesHandler(app.DB)
+	notes := handlers.NewNotesHandler(app.DB, app.Curriculum)
 	chat := handlers.NewChatHandler(app.Chat, app.Distill)
 
 	mux := http.NewServeMux()
@@ -16,6 +16,7 @@ func NewRouter(app *App) http.Handler {
 	mux.HandleFunc("GET /notes", notes.Index)
 	mux.HandleFunc("POST /notes", notes.Create)
 	mux.HandleFunc("GET /notes/{id}", notes.Show)
+	mux.HandleFunc("POST /notes/{id}/promote", notes.Promote)
 	mux.HandleFunc("POST /chat/messages", chat.Create)
 	mux.HandleFunc("POST /chat/{id}/distill", chat.Distill)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))

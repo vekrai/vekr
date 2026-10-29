@@ -1,6 +1,10 @@
 package templates
 
-import "vekr/internal/models"
+import (
+	"fmt"
+
+	"vekr/internal/models"
+)
 
 templ NotesShow(node models.Node, contentHTML string) {
 	@layout(notesShowContent(node, contentHTML))
@@ -8,7 +12,14 @@ templ NotesShow(node models.Node, contentHTML string) {
 
 templ notesShowContent(node models.Node, contentHTML string) {
 	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
-		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ node.Title }</h2>
+		<div class="flex justify-between items-center mb-3.5">
+			<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary">{ node.Title }</h2>
+			if node.Type != models.NodeTypeTopic {
+				<form method="POST" action={ templ.URL(fmt.Sprintf("/notes/%d/promote", node.ID)) }>
+					<button class="text-xs text-ink-secondary hover:underline" type="submit">Turn into topic</button>
+				</form>
+			}
+		</div>
 		<div class="text-sm">
 			@templ.Raw(contentHTML)
 		</div>

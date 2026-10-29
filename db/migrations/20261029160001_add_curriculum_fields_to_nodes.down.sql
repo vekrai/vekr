@@ -1,0 +1,3 @@
+ALTER TABLE nodes DROP COLUMN type;
+ALTER TABLE nodes DROP COLUMN path_id;
+ALTER TABLE nodes DROP COLUMN status;

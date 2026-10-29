@@ -82,3 +82,30 @@ func (k *KnowledgeTools) ReadNote(ctx context.Context, nodeID uint) (string, err
 	}
 	return fmt.Sprintf("Title: %s\n\n%s", node.Title, node.Content), nil
 }
+
+// EditNote updates an existing note's title and/or content — a single-row
+// edit, so it commits directly with no preview step (editing after save is
+// cheap, unlike undoing a graph-shaped curriculum commit). Only the fields
+// passed as non-nil are changed.
+func (k *KnowledgeTools) EditNote(ctx context.Context, nodeID uint, title, content *string) (string, error) {
+	updates := map[string]any{}
+	if title != nil {
+		updates["title"] = *title
+	}
+	if content != nil {
+		updates["content"] = *content
+	}
+	if len(updates) == 0 {
+		return "", fmt.Errorf("edit_note: nothing to update — provide a title or content")
+	}
+
+	if err := k.db.WithContext(ctx).Model(&models.Node{}).Where("id = ?", nodeID).Updates(updates).Error; err != nil {
+		return "", fmt.Errorf("edit_note: %w", err)
+	}
+
+	var node models.Node
+	if err := k.db.WithContext(ctx).First(&node, nodeID).Error; err != nil {
+		return "", fmt.Errorf("edit_note: note %d not found", nodeID)
+	}
+	return fmt.Sprintf("Updated note %q (id=%d).", node.Title, node.ID), nil
+}

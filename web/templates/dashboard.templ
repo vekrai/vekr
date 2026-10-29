@@ -6,11 +6,18 @@ import (
 	"vekr/internal/models"
 )
 
-templ Dashboard(recentNotes []models.Node, nodeCount int64, chat models.Chat, messages []models.ChatMessage, messageHTML []string) {
-	@layout(dashboardContent(recentNotes, nodeCount, chat, messages, messageHTML))
+func progressPercent(p models.PathProgress) float64 {
+	if p.Total == 0 {
+		return 0
+	}
+	return float64(p.Mastered) / float64(p.Total) * 100
 }
 
-templ dashboardContent(recentNotes []models.Node, nodeCount int64, chat models.Chat, messages []models.ChatMessage, messageHTML []string) {
+templ Dashboard(recentNotes []models.Node, nodeCount int64, pathProgress []models.PathProgress, chat models.Chat, messages []models.ChatMessage, messageHTML []string) {
+	@layout(dashboardContent(recentNotes, nodeCount, pathProgress, chat, messages, messageHTML))
+}
+
+templ dashboardContent(recentNotes []models.Node, nodeCount int64, pathProgress []models.PathProgress, chat models.Chat, messages []models.ChatMessage, messageHTML []string) {
 	<div class="grid md:grid-cols-[1.6fr_1fr] gap-4">
 
 		<div class="flex flex-col gap-4">
@@ -23,7 +30,23 @@ templ dashboardContent(recentNotes []models.Node, nodeCount int64, chat models.C
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Active learning paths</h2>
-				<p class="text-xs text-ink-muted">No learning paths yet.</p>
+				if len(pathProgress) == 0 {
+					<p class="text-xs text-ink-muted">No learning paths yet — ask V in chat to build one.</p>
+				} else {
+					<div class="flex flex-col gap-3">
+						for _, p := range pathProgress {
+							<div>
+								<div class="flex justify-between text-sm mb-1">
+									<span>{ p.Path.Title }</span>
+									<span class="text-ink-muted text-xs">{ fmt.Sprintf("%d / %d", p.Mastered, p.Total) }</span>
+								</div>
+								<div class="h-1.5 rounded-full bg-page overflow-hidden">
+									<div class="h-full bg-accent" style={ fmt.Sprintf("width: %.0f%%", progressPercent(p)) }></div>
+								</div>
+							</div>
+						}
+					</div>
+				}
 			</div>
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">

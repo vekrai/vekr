@@ -12,10 +12,11 @@ import (
 )
 
 type App struct {
-	DB       *gorm.DB
-	Sessions *scs.SessionManager
-	Chat     *agent.ChatService
-	Distill  *agent.DistillService
+	DB         *gorm.DB
+	Sessions   *scs.SessionManager
+	Chat       *agent.ChatService
+	Distill    *agent.DistillService
+	Curriculum *agent.CurriculumService
 }
 
 func NewApp(db *gorm.DB) *App {
@@ -24,13 +25,16 @@ func NewApp(db *gorm.DB) *App {
 
 	aiClient := ai.NewClient(ai.ConfigFromEnv(), nil)
 
+	curriculum := agent.NewCurriculumService(db, aiClient)
+
 	webSearch := agent.NewWebSearchTool(os.Getenv("TAVILY_API_KEY"), nil)
 	webFetch := agent.NewWebFetchTool()
 	knowledge := agent.NewKnowledgeTools(db)
-	tools := agent.NewToolRegistry(webSearch, webFetch, knowledge)
+	curriculumTools := agent.NewCurriculumTools(curriculum, sessions)
+	tools := agent.NewToolRegistry(webSearch, webFetch, knowledge, curriculumTools)
 
 	chat := agent.NewChatService(db, aiClient, tools)
 	distill := agent.NewDistillService(db, aiClient)
 
-	return &App{DB: db, Sessions: sessions, Chat: chat, Distill: distill}
+	return &App{DB: db, Sessions: sessions, Chat: chat, Distill: distill, Curriculum: curriculum}
 }
