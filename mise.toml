@@ -1,3 +1,19 @@
 [tools]
 go = "1.27.3"
 node = "26.13.0"
+
+[tasks.dev]
+description = "Run the server"
+run = "go run ./cmd/server"
+
+[tasks."db:migrate"]
+description = "Run database migrations"
+run = "echo migrations not wired up yet"
+
+[tasks."db:seed"]
+description = "Seed the database"
+run = "go run ./cmd/seed"
+
+[tasks.test]
+description = "Run the test suite"
+run = "go test ./..."
