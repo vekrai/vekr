@@ -7,12 +7,11 @@ import (
 )
 
 func NewRouter(app *App) http.Handler {
+	dashboard := handlers.NewDashboardHandler(app.DB)
 	notes := handlers.NewNotesHandler(app.DB)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/notes", http.StatusSeeOther)
-	})
+	mux.HandleFunc("GET /{$}", dashboard.Index)
 	mux.HandleFunc("GET /notes", notes.Index)
 	mux.HandleFunc("POST /notes", notes.Create)
 	mux.HandleFunc("GET /notes/{id}", notes.Show)

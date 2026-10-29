@@ -11,26 +11,28 @@ templ NotesIndex(nodes []models.Node) {
 }
 
 templ notesIndexContent(nodes []models.Node) {
-	<div class="card">
-		<h2>Notes <span class="count">{ fmt.Sprintf("%d items", len(nodes)) }</span></h2>
+	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
+		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">
+			Notes <span class="text-ink-muted font-normal normal-case tracking-normal ml-1.5">{ fmt.Sprintf("%d items", len(nodes)) }</span>
+		</h2>
 		if len(nodes) == 0 {
-			<p class="when">No notes yet.</p>
+			<p class="text-xs text-ink-muted">No notes yet.</p>
 		} else {
 			for _, node := range nodes {
-				<div class="capture-item">
-					<a class="capture-title" href={ templ.URL(fmt.Sprintf("/notes/%d", node.ID)) }>{ node.Title }</a>
-					<span class="when">{ node.CreatedAt.Format("Jan 2, 2006") }</span>
+				<div class="text-sm py-2 border-b border-gridline last:border-b-0">
+					<a class="text-ink hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", node.ID)) }>{ node.Title }</a>
+					<span class="block text-[11px] text-ink-muted mt-0.5">{ node.CreatedAt.Format("Jan 2, 2006") }</span>
 				</div>
 			}
 		}
 	</div>
 
-	<div class="card">
-		<h2>New note</h2>
+	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
+		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">New note</h2>
 		<form method="POST" action="/notes">
-			<input class="field" name="title" placeholder="Title" required/>
-			<textarea class="field" name="content" placeholder="Content" rows="4"></textarea>
-			<button class="btn-primary" type="submit">Create</button>
+			<input class="block w-full border border-black/10 rounded-lg bg-page text-ink text-sm p-2.5 mb-2" name="title" placeholder="Title" required/>
+			<textarea class="block w-full border border-black/10 rounded-lg bg-page text-ink text-sm p-2.5 mb-2 resize-none" name="content" placeholder="Content" rows="4"></textarea>
+			<button class="bg-ink text-surface rounded-lg py-2.5 px-4 text-sm font-semibold hover:opacity-85 cursor-pointer" type="submit">Create</button>
 		</form>
 	</div>
 }

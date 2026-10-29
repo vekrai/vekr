@@ -3,14 +3,23 @@ go = "1.27.3"
 gomigrate = "4.20.1"
 node = "26.13.0"
 "go:github.com/a-h/templ/cmd/templ" = "0.3.1100"
+"github:tailwindlabs/tailwindcss" = "4.3.3"
 
 [tasks."templates:generate"]
 description = "Compile .templ files into Go"
 run = "templ generate"
 
+[tasks."css:build"]
+description = "Build Tailwind CSS"
+run = "tailwindcss -i web/static/css/input.css -o web/static/css/app.css --minify"
+
+[tasks."js:vendor"]
+description = "Re-fetch vendored browser JS from the versions pinned in package.json"
+run = "./scripts/vendor-js.sh"
+
 [tasks.dev]
 description = "Run the server"
-depends = ["templates:generate"]
+depends = ["templates:generate", "css:build"]
 run = "go run ./cmd/server"
 
 [tasks."db:migrate"]

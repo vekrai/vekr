@@ -26,7 +26,7 @@ func layout(content templ.Component) templ.Component {
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Vekr</title><link rel=\"stylesheet\" href=\"/static/css/app.css\"></head><body><div class=\"page\"><div class=\"topbar\"><div class=\"logo\">V</div><div class=\"topbar-spacer\"></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Vekr</title><link rel=\"stylesheet\" href=\"/static/css/app.css\"><script type=\"importmap\">\n\t\t\t{\n\t\t\t\t\"imports\": {\n\t\t\t\t\t\"@hotwired/turbo\": \"/static/js/turbo.min.js\",\n\t\t\t\t\t\"@hotwired/stimulus\": \"/static/js/stimulus.min.js\",\n\t\t\t\t\t\"controllers/\": \"/static/js/controllers/\"\n\t\t\t\t}\n\t\t\t}\n\t\t</script><script type=\"module\" src=\"/static/js/application.js\"></script></head><body class=\"m-0 bg-page text-ink font-sans\"><div class=\"max-w-4xl mx-auto px-6 pt-5 pb-14\"><div class=\"flex items-center gap-4 mb-5\"><a href=\"/\" class=\"w-9 h-9 rounded-[10px] bg-ink text-surface flex items-center justify-center font-bold text-[17px] shrink-0\">V</a></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
