@@ -8,9 +8,12 @@ type Chat struct {
 }
 
 type ChatMessage struct {
-	ID        uint `gorm:"primaryKey"`
-	ChatID    uint
-	Role      string
-	Content   string
-	CreatedAt time.Time
+	ID         uint `gorm:"primaryKey"`
+	ChatID     uint
+	Role       string
+	Content    string
+	ToolCallID string
+	ToolCalls  string
+	Name       string
+	CreatedAt  time.Time
 }

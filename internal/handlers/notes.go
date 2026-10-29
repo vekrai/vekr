@@ -5,6 +5,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"vekr/internal/markdown"
 	"vekr/internal/models"
 	"vekr/web/templates"
 )
@@ -32,7 +33,14 @@ func (h *NotesHandler) Show(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	templates.NotesShow(node).Render(r.Context(), w)
+
+	contentHTML, err := markdown.ToHTML(node.Content)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	templates.NotesShow(node, contentHTML).Render(r.Context(), w)
 }
 
 func (h *NotesHandler) Create(w http.ResponseWriter, r *http.Request) {

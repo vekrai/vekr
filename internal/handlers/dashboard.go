@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 
 	"vekr/internal/agent"
+	"vekr/internal/markdown"
 	"vekr/internal/models"
 	"vekr/web/templates"
 )
@@ -44,5 +45,15 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	templates.Dashboard(recentNotes, nodeCount, chat, messages).Render(r.Context(), w)
+	messageHTML := make([]string, len(messages))
+	for i, m := range messages {
+		html, err := markdown.ToHTML(m.Content)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		messageHTML[i] = html
+	}
+
+	templates.Dashboard(recentNotes, nodeCount, chat, messages, messageHTML).Render(r.Context(), w)
 }

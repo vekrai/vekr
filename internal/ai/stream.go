@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -91,7 +92,9 @@ func (c *Client) StreamChatCompletion(ctx context.Context, req ChatRequest, onEv
 		return nil, fmt.Errorf("ai: read stream: %w", err)
 	}
 
-	return acc.result(), nil
+	result := acc.result()
+	log.Printf("ai: stream finish_reason=%s usage=%+v content=%s", result.FinishReason, result.Usage, truncateForLog([]byte(result.Message.Content)))
+	return result, nil
 }
 
 type streamAccumulator struct {

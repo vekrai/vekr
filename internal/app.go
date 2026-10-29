@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"os"
 	"time"
 
 	"github.com/alexedwards/scs/v2"
@@ -21,7 +22,13 @@ func NewApp(db *gorm.DB) *App {
 	sessions.Lifetime = 24 * time.Hour
 
 	aiClient := ai.NewClient(ai.ConfigFromEnv(), nil)
-	chat := agent.NewChatService(db, aiClient)
+
+	webSearch := agent.NewWebSearchTool(os.Getenv("TAVILY_API_KEY"), nil)
+	webFetch := agent.NewWebFetchTool()
+	knowledge := agent.NewKnowledgeTools(db)
+	tools := agent.NewToolRegistry(webSearch, webFetch, knowledge)
+
+	chat := agent.NewChatService(db, aiClient, tools)
 
 	return &App{DB: db, Sessions: sessions, Chat: chat}
 }

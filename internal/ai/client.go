@@ -6,9 +6,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 )
+
+const logBodyLimit = 4096
+
+func truncateForLog(b []byte) string {
+	if len(b) <= logBodyLimit {
+		return string(b)
+	}
+	return string(b[:logBodyLimit]) + "...(truncated)"
+}
 
 type Client struct {
 	config     Config
@@ -45,6 +55,7 @@ func (c *Client) newRequest(ctx context.Context, body map[string]any) (*http.Req
 	if err != nil {
 		return nil, fmt.Errorf("ai: encode request: %w", err)
 	}
+	log.Printf("ai: request model=%s url=%s body=%s", c.config.Model, c.config.BaseURL+"/chat/completions", truncateForLog(encoded))
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.config.BaseURL+"/chat/completions", bytes.NewReader(encoded))
 	if err != nil {
@@ -88,8 +99,14 @@ func (c *Client) ChatCompletion(ctx context.Context, req ChatRequest) (*ChatResp
 		return nil, fmt.Errorf("ai: unexpected status %d: %s", resp.StatusCode, readErrorBody(resp))
 	}
 
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("ai: read response: %w", err)
+	}
+	log.Printf("ai: response status=%d body=%s", resp.StatusCode, truncateForLog(respBody))
+
 	var wire wireResponse
-	if err := json.NewDecoder(resp.Body).Decode(&wire); err != nil {
+	if err := json.Unmarshal(respBody, &wire); err != nil {
 		return nil, fmt.Errorf("ai: decode response: %w", err)
 	}
 	if len(wire.Choices) == 0 {
