@@ -11,6 +11,7 @@ func NewRouter(app *App) http.Handler {
 	notes := handlers.NewNotesHandler(app.DB, app.Curriculum, app.Chat)
 	chat := handlers.NewChatHandler(app.Chat, app.Distill)
 	practice := handlers.NewPracticeHandler(app.DB, app.Grading)
+	streams := handlers.NewStreamsHandler(app.Hub, app.Chat)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", dashboard.Index)
@@ -20,6 +21,7 @@ func NewRouter(app *App) http.Handler {
 	mux.HandleFunc("POST /notes/{id}/promote", notes.Promote)
 	mux.HandleFunc("POST /chat/messages", chat.Create)
 	mux.HandleFunc("POST /chat/{id}/distill", chat.Distill)
+	mux.HandleFunc("GET /streams/chat/{id}", streams.Chat)
 	mux.HandleFunc("GET /topics/{id}/practice", practice.Index)
 	mux.HandleFunc("GET /drill", practice.Drill)
 	mux.HandleFunc("POST /practice_items/{id}/attempts", practice.Submit)

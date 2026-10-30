@@ -15,7 +15,7 @@ import (
 	"vekr/internal/models"
 )
 
-func NotesShow(node models.Node, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string) templ.Component {
+func NotesShow(node models.Node, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string, chatBusy bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -32,7 +32,7 @@ func NotesShow(node models.Node, contentHTML string, chat models.Chat, messages 
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = layout(notesShowContent(node, contentHTML, chat, messages, messageHTML)).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = layout(notesShowContent(node, contentHTML, chat, messages, messageHTML, chatBusy)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -40,7 +40,7 @@ func NotesShow(node models.Node, contentHTML string, chat models.Chat, messages 
 	})
 }
 
-func notesShowContent(node models.Node, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string) templ.Component {
+func notesShowContent(node models.Node, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string, chatBusy bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -136,7 +136,7 @@ func notesShowContent(node models.Node, contentHTML string, chat models.Chat, me
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = chatPanel(chat, node.ID, messages, messageHTML).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = chatPanel(chat, node.ID, messages, messageHTML, chatBusy).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

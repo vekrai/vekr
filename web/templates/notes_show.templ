@@ -6,11 +6,11 @@ import (
 	"vekr/internal/models"
 )
 
-templ NotesShow(node models.Node, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string) {
-	@layout(notesShowContent(node, contentHTML, chat, messages, messageHTML))
+templ NotesShow(node models.Node, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string, chatBusy bool) {
+	@layout(notesShowContent(node, contentHTML, chat, messages, messageHTML, chatBusy))
 }
 
-templ notesShowContent(node models.Node, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string) {
+templ notesShowContent(node models.Node, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string, chatBusy bool) {
 	<div class="grid md:grid-cols-[1.6fr_1fr] gap-4">
 		<div class="bg-surface border border-black/10 rounded-xl p-5">
 			<div class="flex justify-between items-center mb-3.5">
@@ -30,7 +30,7 @@ templ notesShowContent(node models.Node, contentHTML string, chat models.Chat, m
 			<a class="inline-block mt-2 text-xs text-accent hover:underline" href="/notes">Back to notes</a>
 		</div>
 		<div>
-			@chatPanel(chat, node.ID, messages, messageHTML)
+			@chatPanel(chat, node.ID, messages, messageHTML, chatBusy)
 		</div>
 	</div>
 }

@@ -2,43 +2,41 @@ package agent
 
 import (
 	"context"
-	"encoding/gob"
 	"fmt"
 	"strings"
-
-	"github.com/alexedwards/scs/v2"
+	"sync"
 )
-
-const curriculumPreviewSessionKey = "curriculum_preview"
-
-func init() {
-	// scs gob-encodes session data on commit — the concrete type held
-	// under curriculumPreviewSessionKey must be registered so the decoder
-	// knows what to decode it back into.
-	gob.Register(CurriculumPreview{})
-}
 
 // CurriculumTools exposes curriculum generation to the chat tool loop as
 // two bounded calls rather than one, preserving the preview-then-commit
 // guardrail for graph-shaped output: the model must get the user's
 // confirmation on the preview before a second, explicit call persists it.
-// The preview is held in the chat session between the two calls, never
+// The preview is held in memory per chat between the two calls, never
 // written to the database until commit.
 type CurriculumTools struct {
-	service  *CurriculumService
-	sessions *scs.SessionManager
+	service *CurriculumService
+
+	mu       sync.Mutex
+	previews map[uint]CurriculumPreview
 }
 
-func NewCurriculumTools(service *CurriculumService, sessions *scs.SessionManager) *CurriculumTools {
-	return &CurriculumTools{service: service, sessions: sessions}
+func NewCurriculumTools(service *CurriculumService) *CurriculumTools {
+	return &CurriculumTools{service: service, previews: make(map[uint]CurriculumPreview)}
 }
 
 func (t *CurriculumTools) GeneratePreview(ctx context.Context, intake string) (string, error) {
+	chatID, ok := chatIDFromContext(ctx)
+	if !ok {
+		return "", fmt.Errorf("curriculum preview needs a chat to hold it")
+	}
+
 	preview, err := t.service.Preview(ctx, intake)
 	if err != nil {
 		return "", err
 	}
-	t.sessions.Put(ctx, curriculumPreviewSessionKey, preview)
+	t.mu.Lock()
+	t.previews[chatID] = preview
+	t.mu.Unlock()
 
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "Proposed path: %s\n\n", preview.PathTitle)
@@ -54,7 +52,10 @@ func (t *CurriculumTools) GeneratePreview(ctx context.Context, intake string) (s
 }
 
 func (t *CurriculumTools) CommitPreview(ctx context.Context) (string, error) {
-	preview, ok := t.sessions.Get(ctx, curriculumPreviewSessionKey).(CurriculumPreview)
+	chatID, _ := chatIDFromContext(ctx)
+	t.mu.Lock()
+	preview, ok := t.previews[chatID]
+	t.mu.Unlock()
 	if !ok {
 		return "", fmt.Errorf("no pending curriculum preview to commit — call generate_curriculum_preview first")
 	}
@@ -63,7 +64,9 @@ func (t *CurriculumTools) CommitPreview(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	t.sessions.Remove(ctx, curriculumPreviewSessionKey)
+	t.mu.Lock()
+	delete(t.previews, chatID)
+	t.mu.Unlock()
 
 	return fmt.Sprintf("Committed learning path %q (id=%d) with %d topics.", path.Title, path.ID, len(preview.Topics)), nil
 }

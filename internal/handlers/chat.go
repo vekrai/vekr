@@ -52,7 +52,7 @@ func (h *ChatHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if content != "" {
-		if _, err := h.chat.SendMessage(r.Context(), chat.ID, content); err != nil {
+		if _, err := h.chat.SendMessageInBackground(chat.ID, content); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

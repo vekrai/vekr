@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alexedwards/scs/v2"
 	"gorm.io/gorm"
 
 	"vekr/internal/ai"
@@ -22,14 +21,8 @@ func newCurriculumTools(t *testing.T, db *gorm.DB, handler http.HandlerFunc) (*C
 
 	client := ai.NewClient(ai.Config{BaseURL: server.URL, Model: "test"}, nil)
 	service := NewCurriculumService(db, client)
-	sessions := scs.New()
 
-	ctx, err := sessions.Load(context.Background(), "")
-	if err != nil {
-		t.Fatalf("load session: %v", err)
-	}
-
-	return NewCurriculumTools(service, sessions), ctx
+	return NewCurriculumTools(service), withChatID(context.Background(), 1)
 }
 
 func TestCurriculumToolsGenerateThenCommit(t *testing.T) {

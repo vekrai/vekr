@@ -70,7 +70,7 @@ func (h *NotesHandler) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	templates.NotesShow(node, contentHTML, chat, messages, messageHTML).Render(r.Context(), w)
+	templates.NotesShow(node, contentHTML, chat, messages, messageHTML, chat.ID != 0 && h.chat.Busy(chat.ID)).Render(r.Context(), w)
 }
 
 func (h *NotesHandler) Create(w http.ResponseWriter, r *http.Request) {

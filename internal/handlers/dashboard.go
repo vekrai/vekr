@@ -62,6 +62,7 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	view.ChatBusy = h.chat.Busy(view.Chat.ID)
 	if view.Messages, err = h.chat.History(view.Chat.ID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

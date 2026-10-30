@@ -9,11 +9,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/alexedwards/scs/v2"
 	"gorm.io/gorm"
 
 	"vekr/internal/ai"
+	"vekr/internal/live"
 	"vekr/internal/models"
 )
 
@@ -24,10 +25,10 @@ func newChatService(t *testing.T, db *gorm.DB, handler http.HandlerFunc) *ChatSe
 
 	client := ai.NewClient(ai.Config{BaseURL: server.URL, Model: "test"}, nil)
 	knowledge := NewKnowledgeTools(db)
-	curriculum := NewCurriculumTools(NewCurriculumService(db, client), scs.New())
+	curriculum := NewCurriculumTools(NewCurriculumService(db, client))
 	practice := NewPracticeTools(NewPracticeService(db, client))
 	tools := NewToolRegistry(NewWebSearchTool("", nil), NewWebFetchTool(), knowledge, curriculum, practice)
-	return NewChatService(db, client, tools)
+	return NewChatService(db, client, tools, nil)
 }
 
 func TestChatServiceDispatchesToolCallThenAnswers(t *testing.T) {
@@ -256,5 +257,64 @@ func TestChatServiceNodeChatSendsPageContext(t *testing.T) {
 	}
 	if current.ID == chat.ID {
 		t.Error("CurrentChat returned the node-bound chat, want it to skip chats with a node_id")
+	}
+}
+
+func TestSendMessageInBackgroundRepliesThenPublishesRefresh(t *testing.T) {
+	db := testDB(t)
+
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-release
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"id": "resp-1", "choices": [{"message": {"role": "assistant", "content": "done thinking"}, "finish_reason": "stop"}]}`)
+	}))
+	t.Cleanup(server.Close)
+
+	client := ai.NewClient(ai.Config{BaseURL: server.URL, Model: "test"}, nil)
+	hub := live.NewHub()
+	service := NewChatService(db, client, nil, hub)
+
+	chat, err := service.CurrentChat()
+	if err != nil {
+		t.Fatalf("CurrentChat: %v", err)
+	}
+	events, unsubscribe := hub.Subscribe(live.ChatStream(chat.ID))
+	defer unsubscribe()
+
+	started, err := service.SendMessageInBackground(chat.ID, "hello")
+	if err != nil || !started {
+		t.Fatalf("SendMessageInBackground: started=%v err=%v", started, err)
+	}
+	if !service.Busy(chat.ID) {
+		t.Error("chat should be busy while the reply is in flight")
+	}
+
+	again, err := service.SendMessageInBackground(chat.ID, "second message")
+	if err != nil || again {
+		t.Errorf("second send while busy: started=%v err=%v, want false and no error", again, err)
+	}
+
+	close(release)
+
+	select {
+	case event := <-events:
+		if event != live.RefreshAction() {
+			t.Errorf("got event %q, want a refresh action", event)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("no refresh published after the background reply finished")
+	}
+
+	if service.Busy(chat.ID) {
+		t.Error("chat still busy after the reply finished")
+	}
+
+	history, err := service.History(chat.ID)
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	if len(history) != 2 || history[0].Content != "hello" || history[1].Content != "done thinking" {
+		t.Errorf("got history %+v, want the user message then the reply (and no second message)", history)
 	}
 }

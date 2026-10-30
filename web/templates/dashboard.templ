@@ -18,6 +18,7 @@ type DashboardView struct {
 	Chat          models.Chat
 	Messages      []models.ChatMessage
 	MessageHTML   []string
+	ChatBusy      bool
 }
 
 func progressPercent(p models.PathProgress) float64 {
@@ -106,7 +107,7 @@ templ dashboardContent(view DashboardView) {
 
 		<div class="flex flex-col gap-4">
 
-			@chatPanel(view.Chat, 0, view.Messages, view.MessageHTML)
+			@chatPanel(view.Chat, 0, view.Messages, view.MessageHTML, view.ChatBusy)
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Recent notes</h2>

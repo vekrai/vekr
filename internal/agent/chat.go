@@ -5,13 +5,19 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
+	"sync"
+	"time"
 
 	"gorm.io/gorm"
 
 	"vekr/internal/ai"
+	"vekr/internal/live"
 	"vekr/internal/models"
 )
+
+const backgroundReplyTimeout = 5 * time.Minute
 
 //go:embed prompts/chat_system.txt
 var chatSystemPromptFile string
@@ -22,10 +28,79 @@ type ChatService struct {
 	db     *gorm.DB
 	client *ai.Client
 	tools  *ToolRegistry
+	hub    *live.Hub
+
+	mu       sync.Mutex
+	inFlight map[uint]bool
 }
 
-func NewChatService(db *gorm.DB, client *ai.Client, tools *ToolRegistry) *ChatService {
-	return &ChatService{db: db, client: client, tools: tools}
+func NewChatService(db *gorm.DB, client *ai.Client, tools *ToolRegistry, hub *live.Hub) *ChatService {
+	return &ChatService{db: db, client: client, tools: tools, hub: hub, inFlight: make(map[uint]bool)}
+}
+
+type chatIDKey struct{}
+
+func withChatID(ctx context.Context, chatID uint) context.Context {
+	return context.WithValue(ctx, chatIDKey{}, chatID)
+}
+
+func chatIDFromContext(ctx context.Context) (uint, bool) {
+	chatID, ok := ctx.Value(chatIDKey{}).(uint)
+	return chatID, ok
+}
+
+func (s *ChatService) Busy(chatID uint) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.inFlight[chatID]
+}
+
+func (s *ChatService) LatestMessageID(chatID uint) (uint, error) {
+	var id uint
+	err := s.db.Model(&models.ChatMessage{}).Where("chat_id = ?", chatID).Select("COALESCE(MAX(id), 0)").Scan(&id).Error
+	if err != nil {
+		return 0, fmt.Errorf("agent: load latest message id: %w", err)
+	}
+	return id, nil
+}
+
+func (s *ChatService) SendMessageInBackground(chatID uint, content string) (bool, error) {
+	s.mu.Lock()
+	if s.inFlight[chatID] {
+		s.mu.Unlock()
+		return false, nil
+	}
+	s.inFlight[chatID] = true
+	s.mu.Unlock()
+
+	if _, err := s.AddUserMessage(chatID, content); err != nil {
+		s.finishReply(chatID)
+		return false, err
+	}
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), backgroundReplyTimeout)
+		defer cancel()
+
+		if _, err := s.Reply(ctx, chatID); err != nil {
+			log.Printf("chat %d: background reply failed: %v", chatID, err)
+			failure := models.ChatMessage{ChatID: chatID, Role: string(ai.RoleAssistant), Content: "Sorry, something went wrong while answering: " + err.Error()}
+			if err := s.db.Create(&failure).Error; err != nil {
+				log.Printf("chat %d: save failure message: %v", chatID, err)
+			}
+		}
+		s.finishReply(chatID)
+	}()
+	return true, nil
+}
+
+func (s *ChatService) finishReply(chatID uint) {
+	s.mu.Lock()
+	delete(s.inFlight, chatID)
+	s.mu.Unlock()
+	if s.hub != nil {
+		s.hub.Publish(live.ChatStream(chatID), live.RefreshAction())
+	}
 }
 
 func (s *ChatService) CurrentChat() (models.Chat, error) {
@@ -138,6 +213,22 @@ func removeString(items []string, target string) []string {
 }
 
 func (s *ChatService) SendMessage(ctx context.Context, chatID uint, content string) (models.ChatMessage, error) {
+	if _, err := s.AddUserMessage(chatID, content); err != nil {
+		return models.ChatMessage{}, err
+	}
+	return s.Reply(ctx, chatID)
+}
+
+func (s *ChatService) AddUserMessage(chatID uint, content string) (models.ChatMessage, error) {
+	userMessage := models.ChatMessage{ChatID: chatID, Role: string(ai.RoleUser), Content: content}
+	if err := s.db.Create(&userMessage).Error; err != nil {
+		return models.ChatMessage{}, fmt.Errorf("agent: save user message: %w", err)
+	}
+	return userMessage, nil
+}
+
+func (s *ChatService) Reply(ctx context.Context, chatID uint) (models.ChatMessage, error) {
+	ctx = withChatID(ctx, chatID)
 	chat, err := s.FindChat(chatID)
 	if err != nil {
 		return models.ChatMessage{}, err
@@ -145,11 +236,6 @@ func (s *ChatService) SendMessage(ctx context.Context, chatID uint, content stri
 	pageContext, err := s.pageContext(ctx, chat)
 	if err != nil {
 		return models.ChatMessage{}, err
-	}
-
-	userMessage := models.ChatMessage{ChatID: chatID, Role: string(ai.RoleUser), Content: content}
-	if err := s.db.Create(&userMessage).Error; err != nil {
-		return models.ChatMessage{}, fmt.Errorf("agent: save user message: %w", err)
 	}
 
 	for step := 0; step < maxToolSteps; step++ {

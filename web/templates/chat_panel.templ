@@ -6,17 +6,30 @@ import (
 	"vekr/internal/models"
 )
 
-templ chatPanel(chat models.Chat, nodeID uint, messages []models.ChatMessage, messageHTML []string) {
+func chatStreamURL(chat models.Chat, messages []models.ChatMessage) string {
+	var latest uint
+	for _, m := range messages {
+		if m.ID > latest {
+			latest = m.ID
+		}
+	}
+	return fmt.Sprintf("/streams/chat/%d?after=%d", chat.ID, latest)
+}
+
+templ chatPanel(chat models.Chat, nodeID uint, messages []models.ChatMessage, messageHTML []string, busy bool) {
 	<div class="bg-surface border border-black/10 rounded-xl p-5">
+		if chat.ID != 0 {
+			<turbo-stream-source src={ chatStreamURL(chat, messages) }></turbo-stream-source>
+		}
 		<div class="flex justify-between items-center mb-3.5">
 			<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary">Chat with V</h2>
-			if len(messages) > 0 {
+			if len(messages) > 0 && !busy {
 				<form method="POST" action={ templ.URL(fmt.Sprintf("/chat/%d/distill", chat.ID)) }>
 					<button class="text-xs text-ink-secondary hover:underline" type="submit">Save as note</button>
 				</form>
 			}
 		</div>
-		if len(messages) > 0 {
+		if len(messages) > 0 || busy {
 			<div class="flex flex-col gap-2 mb-2.5 max-h-64 overflow-y-auto">
 				for i, m := range messages {
 					if m.Role == "user" {
@@ -29,6 +42,9 @@ templ chatPanel(chat models.Chat, nodeID uint, messages []models.ChatMessage, me
 						</div>
 					}
 				}
+				if busy {
+					<div class="text-sm self-start max-w-[85%] bg-page border border-black/10 rounded-lg px-3 py-1.5 text-ink-muted">V is thinking…</div>
+				}
 			</div>
 		}
 		<form method="POST" action="/chat/messages">
@@ -38,10 +54,10 @@ templ chatPanel(chat models.Chat, nodeID uint, messages []models.ChatMessage, me
 				<input type="hidden" name="node_id" value={ fmt.Sprintf("%d", nodeID) }/>
 			}
 			<div class="border border-black/10 rounded-lg bg-page p-2.5">
-				<textarea class="block w-full bg-transparent text-sm resize-none outline-none placeholder:text-ink-muted" name="content" placeholder="Talk, paste material, or drop a file…" rows="2"></textarea>
+				<textarea class="block w-full bg-transparent text-sm resize-none outline-none placeholder:text-ink-muted" name="content" placeholder="Talk, paste material, or drop a file…" rows="2" disabled?={ busy }></textarea>
 				<div class="flex justify-between items-center mt-1.5">
 					<span class="text-ink-muted text-sm">📎</span>
-					<button class="bg-ink text-surface rounded-md py-1.5 px-3.5 text-sm font-semibold" type="submit">Send</button>
+					<button class="bg-ink text-surface rounded-md py-1.5 px-3.5 text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed" type="submit" disabled?={ busy }>Send</button>
 				</div>
 			</div>
 		</form>

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"strings"
 	"testing"
 
 	"vekr/internal/models"
@@ -42,5 +43,16 @@ func TestIsLocalPath(t *testing.T) {
 		if got := isLocalPath(path); got != want {
 			t.Errorf("isLocalPath(%q) = %v, want %v", path, got, want)
 		}
+	}
+}
+
+func TestWriteEventPrefixesEveryLine(t *testing.T) {
+	var sb strings.Builder
+	if err := writeEvent(&sb, "<turbo-stream>\n<template>hi</template>\n</turbo-stream>"); err != nil {
+		t.Fatalf("writeEvent: %v", err)
+	}
+	want := "data: <turbo-stream>\ndata: <template>hi</template>\ndata: </turbo-stream>\n\n"
+	if sb.String() != want {
+		t.Errorf("got %q, want %q", sb.String(), want)
 	}
 }

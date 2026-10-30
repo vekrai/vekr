@@ -9,6 +9,7 @@ import (
 
 	"vekr/internal/agent"
 	"vekr/internal/ai"
+	"vekr/internal/live"
 )
 
 type App struct {
@@ -18,12 +19,14 @@ type App struct {
 	Distill    *agent.DistillService
 	Curriculum *agent.CurriculumService
 	Grading    *agent.GradingService
+	Hub        *live.Hub
 }
 
 func NewApp(db *gorm.DB) *App {
 	sessions := scs.New()
 	sessions.Lifetime = 24 * time.Hour
 
+	hub := live.NewHub()
 	aiClient := ai.NewClient(ai.ConfigFromEnv(), nil)
 
 	curriculum := agent.NewCurriculumService(db, aiClient)
@@ -33,12 +36,12 @@ func NewApp(db *gorm.DB) *App {
 	webSearch := agent.NewWebSearchTool(os.Getenv("TAVILY_API_KEY"), nil)
 	webFetch := agent.NewWebFetchTool()
 	knowledge := agent.NewKnowledgeTools(db)
-	curriculumTools := agent.NewCurriculumTools(curriculum, sessions)
+	curriculumTools := agent.NewCurriculumTools(curriculum)
 	practiceTools := agent.NewPracticeTools(practice)
 	tools := agent.NewToolRegistry(webSearch, webFetch, knowledge, curriculumTools, practiceTools)
 
-	chat := agent.NewChatService(db, aiClient, tools)
+	chat := agent.NewChatService(db, aiClient, tools, hub)
 	distill := agent.NewDistillService(db, aiClient)
 
-	return &App{DB: db, Sessions: sessions, Chat: chat, Distill: distill, Curriculum: curriculum, Grading: grading}
+	return &App{DB: db, Sessions: sessions, Chat: chat, Distill: distill, Curriculum: curriculum, Grading: grading, Hub: hub}
 }
