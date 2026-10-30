@@ -17,7 +17,7 @@ type ToolRegistry struct {
 	handlers    map[string]ToolHandler
 }
 
-func NewToolRegistry(webSearch *WebSearchTool, webFetch *WebFetchTool, knowledge *KnowledgeTools, curriculum *CurriculumTools) *ToolRegistry {
+func NewToolRegistry(webSearch *WebSearchTool, webFetch *WebFetchTool, knowledge *KnowledgeTools, curriculum *CurriculumTools, practice *PracticeTools) *ToolRegistry {
 	r := &ToolRegistry{handlers: make(map[string]ToolHandler)}
 
 	r.register(ai.Tool{
@@ -179,6 +179,38 @@ func NewToolRegistry(webSearch *WebSearchTool, webFetch *WebFetchTool, knowledge
 		},
 	}, func(ctx context.Context, args json.RawMessage) (string, error) {
 		return curriculum.CommitPreview(ctx)
+	})
+
+	r.register(ai.Tool{
+		Type: "function",
+		Function: ai.ToolFunction{
+			Name:        "generate_practice_items",
+			Description: "Generate practice questions for a topic node, given its node_id. Items are saved immediately — cheap to regenerate, no confirmation needed.",
+			Parameters: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"node_id": { "type": "integer", "description": "The topic's node_id" },
+					"count": { "type": "integer", "description": "How many items to generate (default 5 if omitted)" }
+				},
+				"required": ["node_id"]
+			}`),
+		},
+	}, func(ctx context.Context, args json.RawMessage) (string, error) {
+		var parsed struct {
+			NodeID uint `json:"node_id"`
+			Count  int  `json:"count"`
+		}
+		if err := json.Unmarshal(args, &parsed); err != nil {
+			return "", fmt.Errorf("invalid arguments: %w", err)
+		}
+		if parsed.NodeID == 0 {
+			return "", fmt.Errorf(`invalid arguments: "node_id" is required`)
+		}
+		count := parsed.Count
+		if count <= 0 {
+			count = 5
+		}
+		return practice.GenerateItems(ctx, parsed.NodeID, count)
 	})
 
 	return r

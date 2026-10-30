@@ -24,7 +24,8 @@ func newChatService(t *testing.T, db *gorm.DB, handler http.HandlerFunc) *ChatSe
 	client := ai.NewClient(ai.Config{BaseURL: server.URL, Model: "test"}, nil)
 	knowledge := NewKnowledgeTools(db)
 	curriculum := NewCurriculumTools(NewCurriculumService(db, client), scs.New())
-	tools := NewToolRegistry(NewWebSearchTool("", nil), NewWebFetchTool(), knowledge, curriculum)
+	practice := NewPracticeTools(NewPracticeService(db, client))
+	tools := NewToolRegistry(NewWebSearchTool("", nil), NewWebFetchTool(), knowledge, curriculum, practice)
 	return NewChatService(db, client, tools)
 }
 

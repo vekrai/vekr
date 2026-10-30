@@ -10,6 +10,7 @@ func NewRouter(app *App) http.Handler {
 	dashboard := handlers.NewDashboardHandler(app.DB, app.Chat)
 	notes := handlers.NewNotesHandler(app.DB, app.Curriculum)
 	chat := handlers.NewChatHandler(app.Chat, app.Distill)
+	practice := handlers.NewPracticeHandler(app.DB, app.Grading)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", dashboard.Index)
@@ -19,6 +20,8 @@ func NewRouter(app *App) http.Handler {
 	mux.HandleFunc("POST /notes/{id}/promote", notes.Promote)
 	mux.HandleFunc("POST /chat/messages", chat.Create)
 	mux.HandleFunc("POST /chat/{id}/distill", chat.Distill)
+	mux.HandleFunc("GET /topics/{id}/practice", practice.Index)
+	mux.HandleFunc("POST /practice_items/{id}/attempts", practice.Submit)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 
 	return Chain(mux, Recovery, Logging, app.Sessions.LoadAndSave)
