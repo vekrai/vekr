@@ -8,7 +8,7 @@ import (
 
 func NewRouter(app *App) http.Handler {
 	dashboard := handlers.NewDashboardHandler(app.DB, app.Chat)
-	notes := handlers.NewNotesHandler(app.DB, app.Curriculum)
+	notes := handlers.NewNotesHandler(app.DB, app.Curriculum, app.Chat)
 	chat := handlers.NewChatHandler(app.Chat, app.Distill)
 	practice := handlers.NewPracticeHandler(app.DB, app.Grading)
 

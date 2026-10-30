@@ -6,24 +6,31 @@ import (
 	"vekr/internal/models"
 )
 
-templ NotesShow(node models.Node, contentHTML string) {
-	@layout(notesShowContent(node, contentHTML))
+templ NotesShow(node models.Node, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string) {
+	@layout(notesShowContent(node, contentHTML, chat, messages, messageHTML))
 }
 
-templ notesShowContent(node models.Node, contentHTML string) {
-	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
-		<div class="flex justify-between items-center mb-3.5">
-			<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary">{ node.Title }</h2>
-			if node.Type != models.NodeTypeTopic {
-				<form method="POST" action={ templ.URL(fmt.Sprintf("/notes/%d/promote", node.ID)) }>
-					<button class="text-xs text-ink-secondary hover:underline" type="submit">Turn into topic</button>
-				</form>
-			}
+templ notesShowContent(node models.Node, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string) {
+	<div class="grid md:grid-cols-[1.6fr_1fr] gap-4">
+		<div class="bg-surface border border-black/10 rounded-xl p-5">
+			<div class="flex justify-between items-center mb-3.5">
+				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary">{ node.Title }</h2>
+				if node.Type == models.NodeTypeTopic {
+					<a class="text-xs text-ink-secondary hover:underline" href={ templ.URL(fmt.Sprintf("/topics/%d/practice", node.ID)) }>Practice</a>
+				} else {
+					<form method="POST" action={ templ.URL(fmt.Sprintf("/notes/%d/promote", node.ID)) }>
+						<button class="text-xs text-ink-secondary hover:underline" type="submit">Turn into topic</button>
+					</form>
+				}
+			</div>
+			<div class="text-sm">
+				@templ.Raw(contentHTML)
+			</div>
+			<p class="text-xs text-ink-muted mt-2">{ node.CreatedAt.Format("Jan 2, 2006 15:04") }</p>
+			<a class="inline-block mt-2 text-xs text-accent hover:underline" href="/notes">Back to notes</a>
 		</div>
-		<div class="text-sm">
-			@templ.Raw(contentHTML)
+		<div>
+			@chatPanel(chat, node.ID, messages, messageHTML)
 		</div>
-		<p class="text-xs text-ink-muted mt-2">{ node.CreatedAt.Format("Jan 2, 2006 15:04") }</p>
-		<a class="inline-block mt-2 text-xs text-accent hover:underline" href="/notes">Back to notes</a>
 	</div>
 }

@@ -1,0 +1,46 @@
+package templates
+
+import (
+	"fmt"
+
+	"vekr/internal/models"
+)
+
+templ PracticeIndex(topic models.Node, items []models.PracticeItem, latestAttempts map[uint]models.Attempt) {
+	@layout(practiceIndexContent(topic, items, latestAttempts))
+}
+
+templ practiceIndexContent(topic models.Node, items []models.PracticeItem, latestAttempts map[uint]models.Attempt) {
+	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
+		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Practice: { topic.Title }</h2>
+		if len(items) == 0 {
+			<p class="text-xs text-ink-muted">No practice items yet — <a class="text-accent hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", topic.ID)) }>ask V on the topic page</a> to generate some.</p>
+		} else {
+			<div class="flex flex-col gap-4">
+				for _, item := range items {
+					<div class="border border-black/10 rounded-lg p-3">
+						<div class="text-[11px] text-ink-muted uppercase tracking-wide mb-1">{ item.Type }</div>
+						<p class="text-sm mb-2">{ item.Prompt }</p>
+						if attempt, ok := latestAttempts[item.ID]; ok {
+							<p class="text-xs mb-2">
+								if attempt.Passed != nil && *attempt.Passed {
+									<span class="text-accent">Passed</span>
+								} else {
+									<span class="text-ink-secondary">Not yet</span>
+								}
+								if attempt.AgentFeedback != "" {
+									<span class="text-ink-muted"> — { attempt.AgentFeedback }</span>
+								}
+							</p>
+						}
+						<form method="POST" action={ templ.URL(fmt.Sprintf("/practice_items/%d/attempts", item.ID)) }>
+							<textarea class="block w-full border border-black/10 rounded-lg bg-page p-2 text-sm resize-none outline-none" name="submission" rows="2" placeholder="Your answer…"></textarea>
+							<button class="mt-2 bg-ink text-surface rounded-md py-1.5 px-3.5 text-sm font-semibold" type="submit">Submit</button>
+						</form>
+					</div>
+				}
+			</div>
+		}
+		<a class="inline-block mt-3 text-xs text-accent hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", topic.ID)) }>Back to topic</a>
+	</div>
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -203,7 +204,7 @@ func TestBuildMessagesSynthesizesDanglingToolCall(t *testing.T) {
 		{Role: "assistant", ToolCalls: string(toolCallsJSON)},
 	}
 
-	messages := buildMessages(history)
+	messages := buildMessages(history, "")
 
 	var sawSynthesized bool
 	for _, m := range messages {
@@ -216,5 +217,44 @@ func TestBuildMessagesSynthesizesDanglingToolCall(t *testing.T) {
 	}
 	if !sawSynthesized {
 		t.Fatal("expected a synthesized tool-result message for the dangling tool call")
+	}
+}
+
+func TestChatServiceNodeChatSendsPageContext(t *testing.T) {
+	db := testDB(t)
+
+	node := models.Node{Title: "Binary search", Content: "Halve the range each step.", Type: models.NodeTypeTopic}
+	if err := db.Create(&node).Error; err != nil {
+		t.Fatalf("create node: %v", err)
+	}
+
+	var body string
+	service := newChatService(t, db, func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		body = string(raw)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"id": "resp-1", "choices": [{"message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}]}`)
+	})
+
+	chat, err := service.StartNodeChat(node.ID)
+	if err != nil {
+		t.Fatalf("StartNodeChat: %v", err)
+	}
+
+	if _, err := service.SendMessage(context.Background(), chat.ID, "quiz me on this"); err != nil {
+		t.Fatalf("SendMessage: %v", err)
+	}
+
+	want := fmt.Sprintf("node_id %d, a topic titled \\\"Binary search\\\"", node.ID)
+	if !strings.Contains(body, want) {
+		t.Errorf("request body missing page context %q:\n%s", want, body)
+	}
+
+	current, err := service.CurrentChat()
+	if err != nil {
+		t.Fatalf("CurrentChat: %v", err)
+	}
+	if current.ID == chat.ID {
+		t.Error("CurrentChat returned the node-bound chat, want it to skip chats with a node_id")
 	}
 }

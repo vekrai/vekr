@@ -30,7 +30,7 @@ func NewChatService(db *gorm.DB, client *ai.Client, tools *ToolRegistry) *ChatSe
 
 func (s *ChatService) CurrentChat() (models.Chat, error) {
 	var chat models.Chat
-	err := s.db.Order("created_at desc").First(&chat).Error
+	err := s.db.Where("node_id IS NULL").Order("created_at desc").First(&chat).Error
 	if err == nil {
 		return chat, nil
 	}
@@ -45,6 +45,33 @@ func (s *ChatService) CurrentChat() (models.Chat, error) {
 	return chat, nil
 }
 
+func (s *ChatService) FindChat(chatID uint) (models.Chat, error) {
+	var chat models.Chat
+	if err := s.db.First(&chat, chatID).Error; err != nil {
+		return models.Chat{}, fmt.Errorf("agent: load chat %d: %w", chatID, err)
+	}
+	return chat, nil
+}
+
+func (s *ChatService) StartNodeChat(nodeID uint) (models.Chat, error) {
+	chat := models.Chat{NodeID: &nodeID}
+	if err := s.db.Create(&chat).Error; err != nil {
+		return models.Chat{}, fmt.Errorf("agent: create chat for node %d: %w", nodeID, err)
+	}
+	return chat, nil
+}
+
+func (s *ChatService) pageContext(ctx context.Context, chat models.Chat) (string, error) {
+	if chat.NodeID == nil {
+		return "", nil
+	}
+	var node models.Node
+	if err := s.db.WithContext(ctx).First(&node, *chat.NodeID).Error; err != nil {
+		return "", fmt.Errorf("agent: load chat node %d: %w", *chat.NodeID, err)
+	}
+	return fmt.Sprintf("The user is chatting from the page of node_id %d, a %s titled %q. \"This note\" or \"this topic\" means this node — call read_note with node_id %d if you need its content.", node.ID, node.Type, node.Title, node.ID), nil
+}
+
 func (s *ChatService) History(chatID uint) ([]models.ChatMessage, error) {
 	var messages []models.ChatMessage
 	if err := s.db.Where("chat_id = ?", chatID).Order("created_at").Find(&messages).Error; err != nil {
@@ -57,9 +84,12 @@ func (s *ChatService) History(chatID uint) ([]models.ChatMessage, error) {
 // system prompt and synthesizing a "no result" tool reply for any assistant
 // tool call that never got a matching result (e.g. the process was cut short
 // mid-loop) so the replayed history is never broken.
-func buildMessages(history []models.ChatMessage) []ai.Message {
-	messages := make([]ai.Message, 0, len(history)+1)
+func buildMessages(history []models.ChatMessage, pageContext string) []ai.Message {
+	messages := make([]ai.Message, 0, len(history)+2)
 	messages = append(messages, ai.Message{Role: ai.RoleSystem, Content: chatSystemPrompt})
+	if pageContext != "" {
+		messages = append(messages, ai.Message{Role: ai.RoleSystem, Content: pageContext})
+	}
 
 	var pendingToolCallIDs []string
 
@@ -108,6 +138,15 @@ func removeString(items []string, target string) []string {
 }
 
 func (s *ChatService) SendMessage(ctx context.Context, chatID uint, content string) (models.ChatMessage, error) {
+	chat, err := s.FindChat(chatID)
+	if err != nil {
+		return models.ChatMessage{}, err
+	}
+	pageContext, err := s.pageContext(ctx, chat)
+	if err != nil {
+		return models.ChatMessage{}, err
+	}
+
 	userMessage := models.ChatMessage{ChatID: chatID, Role: string(ai.RoleUser), Content: content}
 	if err := s.db.Create(&userMessage).Error; err != nil {
 		return models.ChatMessage{}, fmt.Errorf("agent: save user message: %w", err)
@@ -119,7 +158,7 @@ func (s *ChatService) SendMessage(ctx context.Context, chatID uint, content stri
 			return models.ChatMessage{}, err
 		}
 
-		req := ai.ChatRequest{Messages: buildMessages(history)}
+		req := ai.ChatRequest{Messages: buildMessages(history, pageContext)}
 		if s.tools != nil {
 			req.Tools = s.tools.Definitions()
 		}

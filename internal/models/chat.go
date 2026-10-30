@@ -4,6 +4,7 @@ import "time"
 
 type Chat struct {
 	ID        uint `gorm:"primaryKey"`
+	NodeID    *uint
 	CreatedAt time.Time
 }
 
