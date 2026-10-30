@@ -98,7 +98,7 @@ func (s *GradingService) Grade(ctx context.Context, practiceItemID uint, submiss
 			}
 		}
 
-		return nil
+		return updateTopicStatus(tx, item.NodeID)
 	})
 	if err != nil {
 		return models.Attempt{}, fmt.Errorf("agent: grade: %w", err)
@@ -120,6 +120,50 @@ func (s *GradingService) judge(ctx context.Context, item models.PracticeItem, su
 	}
 
 	return CallStructured[gradeResult](ctx, s.client, req)
+}
+
+func updateTopicStatus(tx *gorm.DB, nodeID uint) error {
+	var node models.Node
+	if err := tx.First(&node, nodeID).Error; err != nil {
+		return fmt.Errorf("load topic %d: %w", nodeID, err)
+	}
+	if node.Type != models.NodeTypeTopic || (node.Status != nil && *node.Status == models.StatusMastered) {
+		return nil
+	}
+
+	var row struct {
+		Total  int64
+		Passed int64
+	}
+	err := tx.Raw(`
+		SELECT
+			COUNT(*) AS total,
+			COUNT(*) FILTER (
+				WHERE latest.passed
+				  AND NOT EXISTS (SELECT 1 FROM mistake_log m WHERE m.attempt_id = latest.id)
+			) AS passed
+		FROM practice_items pi
+		LEFT JOIN LATERAL (
+			SELECT a.id, a.passed
+			  FROM attempts a
+			 WHERE a.practice_item_id = pi.id
+			 ORDER BY a.created_at DESC, a.id DESC
+			 LIMIT 1
+		) latest ON true
+		WHERE pi.node_id = ?
+	`, nodeID).Scan(&row).Error
+	if err != nil {
+		return fmt.Errorf("load topic %d progress: %w", nodeID, err)
+	}
+
+	status := models.StatusPracticing
+	if row.Total > 0 && row.Passed == row.Total {
+		status = models.StatusMastered
+	}
+	if err := tx.Model(&models.Node{}).Where("id = ?", nodeID).Update("status", status).Error; err != nil {
+		return fmt.Errorf("update topic %d status: %w", nodeID, err)
+	}
+	return nil
 }
 
 // recomputeConceptWeakness recomputes the rollup for one concept from

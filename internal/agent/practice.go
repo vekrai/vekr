@@ -64,7 +64,12 @@ func (s *PracticeService) GenerateItems(ctx context.Context, nodeID uint, count 
 	var items []models.PracticeItem
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, gi := range generated.Items {
-			if gi.Prompt == "" || gi.Type == "" {
+			if gi.Prompt == "" {
+				continue
+			}
+			switch gi.Type {
+			case models.PracticeItemTypeMCQ, models.PracticeItemTypeFlashcard, models.PracticeItemTypeOpen, models.PracticeItemTypeCode:
+			default:
 				continue
 			}
 			item := models.PracticeItem{NodeID: nodeID, Prompt: gi.Prompt, Type: gi.Type}

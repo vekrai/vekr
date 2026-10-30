@@ -110,3 +110,31 @@ func TestPracticeGenerateItemsReusesExistingConcept(t *testing.T) {
 		t.Errorf("got %d concept rows for the same name, want 1 (reused, not duplicated)", count)
 	}
 }
+
+func TestPracticeGenerateItemsSkipsUnknownType(t *testing.T) {
+	db := testDB(t)
+
+	topic := models.Node{Title: "Topic", Content: "content", Type: models.NodeTypeTopic}
+	if err := db.Create(&topic).Error; err != nil {
+		t.Fatalf("create topic: %v", err)
+	}
+
+	service := newPracticeService(t, db, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{
+			"id": "resp",
+			"choices": [{
+				"message": {"role": "assistant", "content": "{\"items\":[{\"prompt\":\"Bad\",\"answer_key\":\"x\",\"type\":\"multiple_choice\",\"concepts\":[]},{\"prompt\":\"Good\",\"answer_key\":\"B\",\"type\":\"mcq\",\"concepts\":[]}]}"},
+				"finish_reason": "stop"
+			}]
+		}`)
+	})
+
+	items, err := service.GenerateItems(context.Background(), topic.ID, 2)
+	if err != nil {
+		t.Fatalf("GenerateItems: %v", err)
+	}
+	if len(items) != 1 || items[0].Prompt != "Good" {
+		t.Errorf("got items %+v, want only the mcq item — unknown types should be skipped, not fail the batch", items)
+	}
+}

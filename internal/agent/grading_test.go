@@ -180,3 +180,91 @@ func TestGradePassingNotFlaggedLogsNoMistake(t *testing.T) {
 		t.Errorf("got %d mistake_log rows, want 0 for an unflagged pass", mistakeCount)
 	}
 }
+
+func topicStatus(t *testing.T, db *gorm.DB, nodeID uint) string {
+	t.Helper()
+	var node models.Node
+	if err := db.First(&node, nodeID).Error; err != nil {
+		t.Fatalf("load topic: %v", err)
+	}
+	if node.Status == nil {
+		return ""
+	}
+	return *node.Status
+}
+
+func TestGradeMastersTopicOnceEveryItemPasses(t *testing.T) {
+	db := testDB(t)
+
+	notStarted := models.StatusNotStarted
+	topic := models.Node{Title: "Capitals", Content: "content", Type: models.NodeTypeTopic, Status: &notStarted}
+	if err := db.Create(&topic).Error; err != nil {
+		t.Fatalf("create topic: %v", err)
+	}
+	keyA, keyB := "A", "C"
+	first := models.PracticeItem{NodeID: topic.ID, Prompt: "q1", Type: models.PracticeItemTypeMCQ, AnswerKey: &keyA}
+	second := models.PracticeItem{NodeID: topic.ID, Prompt: "q2", Type: models.PracticeItemTypeMCQ, AnswerKey: &keyB}
+	if err := db.Create(&first).Error; err != nil {
+		t.Fatalf("create item: %v", err)
+	}
+	if err := db.Create(&second).Error; err != nil {
+		t.Fatalf("create item: %v", err)
+	}
+
+	service := newGradingService(t, db, func(w http.ResponseWriter, r *http.Request) {
+		t.Error("unexpected model call for mcq grading")
+	})
+	ctx := context.Background()
+
+	if _, err := service.Grade(ctx, first.ID, "a"); err != nil {
+		t.Fatalf("Grade: %v", err)
+	}
+	if got := topicStatus(t, db, topic.ID); got != models.StatusPracticing {
+		t.Fatalf("after one of two passes: got status %q, want %q", got, models.StatusPracticing)
+	}
+
+	if _, err := service.Grade(ctx, second.ID, "B"); err != nil {
+		t.Fatalf("Grade: %v", err)
+	}
+	if got := topicStatus(t, db, topic.ID); got != models.StatusPracticing {
+		t.Fatalf("after a wrong answer: got status %q, want %q", got, models.StatusPracticing)
+	}
+
+	if _, err := service.Grade(ctx, second.ID, "c"); err != nil {
+		t.Fatalf("Grade: %v", err)
+	}
+	if got := topicStatus(t, db, topic.ID); got != models.StatusMastered {
+		t.Fatalf("after every item's latest attempt passed: got status %q, want %q", got, models.StatusMastered)
+	}
+
+	if _, err := service.Grade(ctx, first.ID, "wrong"); err != nil {
+		t.Fatalf("Grade: %v", err)
+	}
+	if got := topicStatus(t, db, topic.ID); got != models.StatusMastered {
+		t.Errorf("mastered should be terminal: got status %q after a later miss", got)
+	}
+}
+
+func TestGradeFlaggedPassDoesNotMasterTopic(t *testing.T) {
+	db := testDB(t)
+
+	item := seedPracticeItem(t, db, models.PracticeItemTypeCode, nil, "boundary-pointers")
+
+	service := newGradingService(t, db, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{
+			"id": "resp",
+			"choices": [{
+				"message": {"role": "assistant", "content": "{\"passed\":true,\"feedback\":\"fragile\",\"flagged\":true,\"error_type\":\"careless_slip\"}"},
+				"finish_reason": "stop"
+			}]
+		}`)
+	})
+
+	if _, err := service.Grade(context.Background(), item.ID, "code"); err != nil {
+		t.Fatalf("Grade: %v", err)
+	}
+	if got := topicStatus(t, db, item.NodeID); got != models.StatusPracticing {
+		t.Errorf("got status %q, want %q — a flagged pass should not count toward mastery", got, models.StatusPracticing)
+	}
+}

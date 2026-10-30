@@ -21,6 +21,7 @@ func NewRouter(app *App) http.Handler {
 	mux.HandleFunc("POST /chat/messages", chat.Create)
 	mux.HandleFunc("POST /chat/{id}/distill", chat.Distill)
 	mux.HandleFunc("GET /topics/{id}/practice", practice.Index)
+	mux.HandleFunc("GET /drill", practice.Drill)
 	mux.HandleFunc("POST /practice_items/{id}/attempts", practice.Submit)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 

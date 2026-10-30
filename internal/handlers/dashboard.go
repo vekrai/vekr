@@ -10,6 +10,8 @@ import (
 	"vekr/web/templates"
 )
 
+const dashboardListLimit = 5
+
 type DashboardHandler struct {
 	db   *gorm.DB
 	chat *agent.ChatService
@@ -20,43 +22,84 @@ func NewDashboardHandler(db *gorm.DB, chat *agent.ChatService) *DashboardHandler
 }
 
 func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
-	var recentNotes []models.Node
-	if err := h.db.Order("created_at desc").Limit(5).Find(&recentNotes).Error; err != nil {
+	var view templates.DashboardView
+
+	if err := h.db.Order("created_at desc").Limit(dashboardListLimit).Find(&view.RecentNotes).Error; err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	var nodeCount int64
-	if err := h.db.Model(&models.Node{}).Count(&nodeCount).Error; err != nil {
+	if err := h.db.Model(&models.Node{}).Count(&view.NodeCount).Error; err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	pathProgress, err := h.loadPathProgress()
-	if err != nil {
+	masteredScope := h.db.Where("type = ? AND status = ?", models.NodeTypeTopic, models.StatusMastered).Session(&gorm.Session{})
+	if err := masteredScope.Model(&models.Node{}).Count(&view.MasteredCount).Error; err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := masteredScope.Order("updated_at desc").Limit(dashboardListLimit).Find(&view.Mastered).Error; err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	chat, err := h.chat.CurrentChat()
-	if err != nil {
+	var err error
+	if view.PathProgress, err = h.loadPathProgress(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if view.Queue, err = h.loadQueue(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if view.WeakSpots, err = h.loadWeakSpots(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	messages, err := h.chat.History(chat.ID)
-	if err != nil {
+	if view.Chat, err = h.chat.CurrentChat(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if view.Messages, err = h.chat.History(view.Chat.ID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if view.MessageHTML, err = renderMessages(view.Messages); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	messageHTML, err := renderMessages(messages)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	templates.Dashboard(view).Render(r.Context(), w)
+}
 
-	templates.Dashboard(recentNotes, nodeCount, pathProgress, chat, messages, messageHTML).Render(r.Context(), w)
+func (h *DashboardHandler) loadQueue() ([]models.QueueItem, error) {
+	var queue []models.QueueItem
+	err := h.db.Raw(`
+		SELECT n.id AS node_id, n.title, COUNT(DISTINCT pi.id) AS item_count
+		FROM nodes n
+		LEFT JOIN practice_items pi ON pi.node_id = n.id
+		LEFT JOIN attempts a ON a.practice_item_id = pi.id
+		WHERE n.type = ? AND (n.status IS NULL OR n.status <> ?)
+		GROUP BY n.id, n.title
+		ORDER BY GREATEST(n.updated_at, MAX(a.created_at)) DESC, n.id DESC
+		LIMIT ?
+	`, models.NodeTypeTopic, models.StatusMastered, dashboardListLimit).Scan(&queue).Error
+	return queue, err
+}
+
+func (h *DashboardHandler) loadWeakSpots() ([]models.WeakSpot, error) {
+	var spots []models.WeakSpot
+	err := h.db.Raw(`
+		SELECT c.id AS concept_id, c.name, cw.miss_count, cw.attempt_count, cw.last_missed_at
+		FROM concept_weakness cw
+		JOIN concepts c ON c.id = cw.concept_id
+		WHERE cw.miss_count > 0
+		ORDER BY cw.last_missed_at DESC NULLS LAST, c.id DESC
+		LIMIT ?
+	`, dashboardListLimit).Scan(&spots).Error
+	return spots, err
 }
 
 type pathProgressRow struct {

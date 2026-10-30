@@ -2,9 +2,23 @@ package templates
 
 import (
 	"fmt"
+	"net/url"
 
 	"vekr/internal/models"
 )
+
+type DashboardView struct {
+	RecentNotes   []models.Node
+	NodeCount     int64
+	MasteredCount int64
+	Mastered      []models.Node
+	PathProgress  []models.PathProgress
+	Queue         []models.QueueItem
+	WeakSpots     []models.WeakSpot
+	Chat          models.Chat
+	Messages      []models.ChatMessage
+	MessageHTML   []string
+}
 
 func progressPercent(p models.PathProgress) float64 {
 	if p.Total == 0 {
@@ -13,28 +27,53 @@ func progressPercent(p models.PathProgress) float64 {
 	return float64(p.Mastered) / float64(p.Total) * 100
 }
 
-templ Dashboard(recentNotes []models.Node, nodeCount int64, pathProgress []models.PathProgress, chat models.Chat, messages []models.ChatMessage, messageHTML []string) {
-	@layout(dashboardContent(recentNotes, nodeCount, pathProgress, chat, messages, messageHTML))
+func queueItemURL(q models.QueueItem) string {
+	if q.Kind() == models.QueueKindPractice {
+		return fmt.Sprintf("/topics/%d/practice", q.NodeID)
+	}
+	return fmt.Sprintf("/notes/%d", q.NodeID)
 }
 
-templ dashboardContent(recentNotes []models.Node, nodeCount int64, pathProgress []models.PathProgress, chat models.Chat, messages []models.ChatMessage, messageHTML []string) {
+func drillURL(spots ...models.WeakSpot) string {
+	q := url.Values{}
+	for _, s := range spots {
+		q.Add("concept_id", fmt.Sprintf("%d", s.ConceptID))
+	}
+	return "/drill?" + q.Encode()
+}
+
+templ Dashboard(view DashboardView) {
+	@layout(dashboardContent(view))
+}
+
+templ dashboardContent(view DashboardView) {
 	<div class="grid md:grid-cols-[1.6fr_1fr] gap-4">
 
 		<div class="flex flex-col gap-4">
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Today's queue</h2>
-				<p class="text-xs text-ink-muted">No items due yet — the scheduler isn't wired up.</p>
-				<button class="mt-3.5 w-full bg-ink/30 text-surface rounded-lg py-2.5 text-sm font-semibold cursor-not-allowed" disabled>Start today's session</button>
+				if len(view.Queue) == 0 {
+					<p class="text-xs text-ink-muted">Nothing queued — build a learning path or turn a note into a topic.</p>
+					<button class="mt-3.5 w-full bg-ink/30 text-surface rounded-lg py-2.5 text-sm font-semibold cursor-not-allowed" disabled>Start today's session</button>
+				} else {
+					for _, q := range view.Queue {
+						<div class="flex justify-between items-center text-sm py-2 border-b border-gridline last:border-b-0">
+							<a class="text-ink-secondary hover:underline" href={ templ.URL(queueItemURL(q)) }>{ q.Title }</a>
+							<span class="text-[11px] text-ink-muted uppercase tracking-wide">{ q.Kind() }</span>
+						</div>
+					}
+					<a class="mt-3.5 block w-full text-center bg-ink text-surface rounded-lg py-2.5 text-sm font-semibold hover:opacity-85" href={ templ.URL(queueItemURL(view.Queue[0])) }>Start today's session</a>
+				}
 			</div>
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Active learning paths</h2>
-				if len(pathProgress) == 0 {
+				if len(view.PathProgress) == 0 {
 					<p class="text-xs text-ink-muted">No learning paths yet — ask V in chat to build one.</p>
 				} else {
 					<div class="flex flex-col gap-3">
-						for _, p := range pathProgress {
+						for _, p := range view.PathProgress {
 							<div>
 								<div class="flex justify-between text-sm mb-1">
 									<span>{ p.Path.Title }</span>
@@ -51,21 +90,30 @@ templ dashboardContent(recentNotes []models.Node, nodeCount int64, pathProgress 
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Mastered</h2>
-				<p class="text-xs text-ink-muted">Nothing mastered yet.</p>
+				if len(view.Mastered) == 0 {
+					<p class="text-xs text-ink-muted">Nothing mastered yet.</p>
+				} else {
+					for _, node := range view.Mastered {
+						<div class="text-sm py-2 border-b border-gridline last:border-b-0">
+							<a class="text-ink-secondary hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", node.ID)) }>{ node.Title }</a>
+							<span class="block text-[11px] text-ink-muted mt-0.5">{ node.UpdatedAt.Format("Jan 2, 2006") }</span>
+						</div>
+					}
+				}
 			</div>
 
 		</div>
 
 		<div class="flex flex-col gap-4">
 
-			@chatPanel(chat, 0, messages, messageHTML)
+			@chatPanel(view.Chat, 0, view.Messages, view.MessageHTML)
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Recent notes</h2>
-				if len(recentNotes) == 0 {
+				if len(view.RecentNotes) == 0 {
 					<p class="text-xs text-ink-muted">No notes yet.</p>
 				} else {
-					for _, node := range recentNotes {
+					for _, node := range view.RecentNotes {
 						<div class="text-sm py-2 border-b border-gridline last:border-b-0">
 							<a class="text-ink-secondary hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", node.ID)) }>{ node.Title }</a>
 							<span class="block text-[11px] text-ink-muted mt-0.5">{ node.CreatedAt.Format("Jan 2, 2006") }</span>
@@ -76,7 +124,22 @@ templ dashboardContent(recentNotes []models.Node, nodeCount int64, pathProgress 
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Weak spots</h2>
-				<p class="text-xs text-ink-muted">No weak spots tracked yet.</p>
+				if len(view.WeakSpots) == 0 {
+					<p class="text-xs text-ink-muted">No weak spots tracked yet.</p>
+				} else {
+					for _, spot := range view.WeakSpots {
+						<div class="flex justify-between items-center text-sm py-2 border-b border-gridline last:border-b-0">
+							<div>
+								<span>{ spot.Name }</span>
+								<span class="block text-[11px] text-ink-muted mt-0.5">{ fmt.Sprintf("missed %d of %d attempts", spot.MissCount, spot.AttemptCount) }</span>
+							</div>
+							<a class="text-xs text-accent hover:underline" href={ templ.URL(drillURL(spot)) }>Drill</a>
+						</div>
+					}
+					if len(view.WeakSpots) > 1 {
+						<a class="mt-3.5 block w-full text-center bg-ink text-surface rounded-lg py-2.5 text-sm font-semibold hover:opacity-85" href={ templ.URL(drillURL(view.WeakSpots...)) }>Practice these together</a>
+					}
+				}
 			</div>
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
@@ -88,11 +151,11 @@ templ dashboardContent(recentNotes []models.Node, nodeCount int64, pathProgress 
 					</div>
 					<div>
 						<div class="text-xs text-ink-muted mb-1">Nodes</div>
-						<div class="text-2xl font-semibold leading-tight">{ fmt.Sprintf("%d", nodeCount) }</div>
+						<div class="text-2xl font-semibold leading-tight">{ fmt.Sprintf("%d", view.NodeCount) }</div>
 					</div>
 					<div>
 						<div class="text-xs text-ink-muted mb-1">Mastered</div>
-						<div class="text-2xl font-semibold leading-tight">—</div>
+						<div class="text-2xl font-semibold leading-tight">{ fmt.Sprintf("%d", view.MasteredCount) }</div>
 					</div>
 				</div>
 			</div>
