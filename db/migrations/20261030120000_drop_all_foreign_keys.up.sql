@@ -1,0 +1,14 @@
+ALTER TABLE attempts DROP CONSTRAINT IF EXISTS attempts_practice_item_id_fkey;
+ALTER TABLE chat_messages DROP CONSTRAINT IF EXISTS chat_messages_chat_id_fkey;
+ALTER TABLE chats DROP CONSTRAINT IF EXISTS chats_node_id_fkey;
+ALTER TABLE concept_weakness DROP CONSTRAINT IF EXISTS concept_weakness_concept_id_fkey;
+ALTER TABLE concepts DROP CONSTRAINT IF EXISTS concepts_path_id_fkey;
+ALTER TABLE mistake_log DROP CONSTRAINT IF EXISTS mistake_log_attempt_id_fkey;
+ALTER TABLE mistake_log DROP CONSTRAINT IF EXISTS mistake_log_concept_id_fkey;
+ALTER TABLE node_concepts DROP CONSTRAINT IF EXISTS node_concepts_concept_id_fkey;
+ALTER TABLE node_concepts DROP CONSTRAINT IF EXISTS node_concepts_node_id_fkey;
+ALTER TABLE nodes DROP CONSTRAINT IF EXISTS nodes_path_id_fkey;
+ALTER TABLE nodes DROP CONSTRAINT IF EXISTS nodes_source_chat_id_fkey;
+ALTER TABLE practice_item_concepts DROP CONSTRAINT IF EXISTS practice_item_concepts_concept_id_fkey;
+ALTER TABLE practice_item_concepts DROP CONSTRAINT IF EXISTS practice_item_concepts_practice_item_id_fkey;
+ALTER TABLE practice_items DROP CONSTRAINT IF EXISTS practice_items_node_id_fkey;

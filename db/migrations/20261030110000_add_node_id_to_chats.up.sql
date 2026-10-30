@@ -1,0 +1,1 @@
+ALTER TABLE chats ADD COLUMN node_id BIGINT REFERENCES nodes(id);

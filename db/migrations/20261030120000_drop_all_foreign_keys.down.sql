@@ -1,0 +1,14 @@
+ALTER TABLE attempts ADD CONSTRAINT attempts_practice_item_id_fkey FOREIGN KEY (practice_item_id) REFERENCES practice_items(id);
+ALTER TABLE chat_messages ADD CONSTRAINT chat_messages_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES chats(id);
+ALTER TABLE chats ADD CONSTRAINT chats_node_id_fkey FOREIGN KEY (node_id) REFERENCES nodes(id);
+ALTER TABLE concept_weakness ADD CONSTRAINT concept_weakness_concept_id_fkey FOREIGN KEY (concept_id) REFERENCES concepts(id);
+ALTER TABLE concepts ADD CONSTRAINT concepts_path_id_fkey FOREIGN KEY (path_id) REFERENCES paths(id);
+ALTER TABLE mistake_log ADD CONSTRAINT mistake_log_attempt_id_fkey FOREIGN KEY (attempt_id) REFERENCES attempts(id);
+ALTER TABLE mistake_log ADD CONSTRAINT mistake_log_concept_id_fkey FOREIGN KEY (concept_id) REFERENCES concepts(id);
+ALTER TABLE node_concepts ADD CONSTRAINT node_concepts_concept_id_fkey FOREIGN KEY (concept_id) REFERENCES concepts(id);
+ALTER TABLE node_concepts ADD CONSTRAINT node_concepts_node_id_fkey FOREIGN KEY (node_id) REFERENCES nodes(id);
+ALTER TABLE nodes ADD CONSTRAINT nodes_path_id_fkey FOREIGN KEY (path_id) REFERENCES paths(id);
+ALTER TABLE nodes ADD CONSTRAINT nodes_source_chat_id_fkey FOREIGN KEY (source_chat_id) REFERENCES chats(id);
+ALTER TABLE practice_item_concepts ADD CONSTRAINT practice_item_concepts_concept_id_fkey FOREIGN KEY (concept_id) REFERENCES concepts(id);
+ALTER TABLE practice_item_concepts ADD CONSTRAINT practice_item_concepts_practice_item_id_fkey FOREIGN KEY (practice_item_id) REFERENCES practice_items(id);
+ALTER TABLE practice_items ADD CONSTRAINT practice_items_node_id_fkey FOREIGN KEY (node_id) REFERENCES nodes(id);
