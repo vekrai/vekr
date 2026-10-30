@@ -9,6 +9,8 @@ package templates
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
+import "vekr/internal/i18n"
+
 func layout(content templ.Component) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -26,7 +28,33 @@ func layout(content templ.Component) templ.Component {
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Vekr</title><meta name=\"turbo-refresh-method\" content=\"morph\"><meta name=\"turbo-refresh-scroll\" content=\"preserve\"><link rel=\"stylesheet\" href=\"/static/css/app.css\"><script type=\"importmap\">\n\t\t\t{\n\t\t\t\t\"imports\": {\n\t\t\t\t\t\"@hotwired/turbo\": \"/static/js/turbo.min.js\",\n\t\t\t\t\t\"@hotwired/stimulus\": \"/static/js/stimulus.min.js\",\n\t\t\t\t\t\"controllers/\": \"/static/js/controllers/\"\n\t\t\t\t}\n\t\t\t}\n\t\t</script><script type=\"module\" src=\"/static/js/application.js\"></script></head><body class=\"m-0 bg-page text-ink font-sans\"><div class=\"max-w-4xl mx-auto px-6 pt-5 pb-14\"><div class=\"flex items-center gap-4 mb-5\"><a href=\"/\" class=\"w-9 h-9 rounded-[10px] bg-ink text-surface flex items-center justify-center font-bold text-[17px] shrink-0\">V</a></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var2 string
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templruntime.NewAttributeExpression(i18n.Lang(ctx)).Resolve(ctx)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 7, Col: 28}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var3 string
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(t(ctx, "app.title"))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/layout.templ`, Line: 11, Col: 30}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</title><meta name=\"turbo-refresh-method\" content=\"morph\"><meta name=\"turbo-refresh-scroll\" content=\"preserve\"><link rel=\"stylesheet\" href=\"/static/css/app.css\"><script type=\"importmap\">\n\t\t\t{\n\t\t\t\t\"imports\": {\n\t\t\t\t\t\"@hotwired/turbo\": \"/static/js/turbo.min.js\",\n\t\t\t\t\t\"@hotwired/stimulus\": \"/static/js/stimulus.min.js\",\n\t\t\t\t\t\"controllers/\": \"/static/js/controllers/\"\n\t\t\t\t}\n\t\t\t}\n\t\t</script><script type=\"module\" src=\"/static/js/application.js\"></script></head><body class=\"m-0 bg-page text-ink font-sans\"><div class=\"max-w-4xl mx-auto px-6 pt-5 pb-14\"><div class=\"flex items-center gap-4 mb-5\"><a href=\"/\" class=\"w-9 h-9 rounded-[10px] bg-ink text-surface flex items-center justify-center font-bold text-[17px] shrink-0\">V</a></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -34,7 +62,7 @@ func layout(content templ.Component) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

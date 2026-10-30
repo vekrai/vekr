@@ -1,12 +1,14 @@
 package templates
 
+import "vekr/internal/i18n"
+
 templ layout(content templ.Component) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang={ i18n.Lang(ctx) }>
 	<head>
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-		<title>Vekr</title>
+		<title>{ t(ctx, "app.title") }</title>
 		<meta name="turbo-refresh-method" content="morph"/>
 		<meta name="turbo-refresh-scroll" content="preserve"/>
 		<link rel="stylesheet" href="/static/css/app.css"/>

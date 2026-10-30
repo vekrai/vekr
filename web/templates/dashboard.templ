@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -28,6 +29,10 @@ func progressPercent(p models.PathProgress) float64 {
 	return float64(p.Mastered) / float64(p.Total) * 100
 }
 
+func queueKindLabel(ctx context.Context, q models.QueueItem) string {
+	return t(ctx, "queue.kind."+q.Kind())
+}
+
 func queueItemURL(q models.QueueItem) string {
 	if q.Kind() == models.QueueKindPractice {
 		return fmt.Sprintf("/topics/%d/practice", q.NodeID)
@@ -53,25 +58,25 @@ templ dashboardContent(view DashboardView) {
 		<div class="flex flex-col gap-4">
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
-				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Today's queue</h2>
+				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ t(ctx, "dashboard.queue.title") }</h2>
 				if len(view.Queue) == 0 {
-					<p class="text-xs text-ink-muted">Nothing queued — build a learning path or turn a note into a topic.</p>
-					<button class="mt-3.5 w-full bg-ink/30 text-surface rounded-lg py-2.5 text-sm font-semibold cursor-not-allowed" disabled>Start today's session</button>
+					<p class="text-xs text-ink-muted">{ t(ctx, "dashboard.queue.empty") }</p>
+					<button class="mt-3.5 w-full bg-ink/30 text-surface rounded-lg py-2.5 text-sm font-semibold cursor-not-allowed" disabled>{ t(ctx, "dashboard.queue.start") }</button>
 				} else {
 					for _, q := range view.Queue {
 						<div class="flex justify-between items-center text-sm py-2 border-b border-gridline last:border-b-0">
 							<a class="text-ink-secondary hover:underline" href={ templ.URL(queueItemURL(q)) }>{ q.Title }</a>
-							<span class="text-[11px] text-ink-muted uppercase tracking-wide">{ q.Kind() }</span>
+							<span class="text-[11px] text-ink-muted uppercase tracking-wide">{ queueKindLabel(ctx, q) }</span>
 						</div>
 					}
-					<a class="mt-3.5 block w-full text-center bg-ink text-surface rounded-lg py-2.5 text-sm font-semibold hover:opacity-85" href={ templ.URL(queueItemURL(view.Queue[0])) }>Start today's session</a>
+					<a class="mt-3.5 block w-full text-center bg-ink text-surface rounded-lg py-2.5 text-sm font-semibold hover:opacity-85" href={ templ.URL(queueItemURL(view.Queue[0])) }>{ t(ctx, "dashboard.queue.start") }</a>
 				}
 			</div>
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
-				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Active learning paths</h2>
+				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ t(ctx, "dashboard.paths.title") }</h2>
 				if len(view.PathProgress) == 0 {
-					<p class="text-xs text-ink-muted">No learning paths yet — ask V in chat to build one.</p>
+					<p class="text-xs text-ink-muted">{ t(ctx, "dashboard.paths.empty") }</p>
 				} else {
 					<div class="flex flex-col gap-3">
 						for _, p := range view.PathProgress {
@@ -90,9 +95,9 @@ templ dashboardContent(view DashboardView) {
 			</div>
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
-				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Mastered</h2>
+				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ t(ctx, "dashboard.mastered.title") }</h2>
 				if len(view.Mastered) == 0 {
-					<p class="text-xs text-ink-muted">Nothing mastered yet.</p>
+					<p class="text-xs text-ink-muted">{ t(ctx, "dashboard.mastered.empty") }</p>
 				} else {
 					for _, node := range view.Mastered {
 						<div class="text-sm py-2 border-b border-gridline last:border-b-0">
@@ -110,9 +115,9 @@ templ dashboardContent(view DashboardView) {
 			@chatPanel(view.Chat, 0, view.Messages, view.MessageHTML, view.ChatBusy)
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
-				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Recent notes</h2>
+				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ t(ctx, "dashboard.recent.title") }</h2>
 				if len(view.RecentNotes) == 0 {
-					<p class="text-xs text-ink-muted">No notes yet.</p>
+					<p class="text-xs text-ink-muted">{ t(ctx, "notes.empty") }</p>
 				} else {
 					for _, node := range view.RecentNotes {
 						<div class="text-sm py-2 border-b border-gridline last:border-b-0">
@@ -124,38 +129,38 @@ templ dashboardContent(view DashboardView) {
 			</div>
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
-				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Weak spots</h2>
+				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ t(ctx, "dashboard.weak.title") }</h2>
 				if len(view.WeakSpots) == 0 {
-					<p class="text-xs text-ink-muted">No weak spots tracked yet.</p>
+					<p class="text-xs text-ink-muted">{ t(ctx, "dashboard.weak.empty") }</p>
 				} else {
 					for _, spot := range view.WeakSpots {
 						<div class="flex justify-between items-center text-sm py-2 border-b border-gridline last:border-b-0">
 							<div>
 								<span>{ spot.Name }</span>
-								<span class="block text-[11px] text-ink-muted mt-0.5">{ fmt.Sprintf("missed %d of %d attempts", spot.MissCount, spot.AttemptCount) }</span>
+								<span class="block text-[11px] text-ink-muted mt-0.5">{ tCount(ctx, "dashboard.weak.missed", spot.AttemptCount, map[string]any{"Misses": spot.MissCount}) }</span>
 							</div>
-							<a class="text-xs text-accent hover:underline" href={ templ.URL(drillURL(spot)) }>Drill</a>
+							<a class="text-xs text-accent hover:underline" href={ templ.URL(drillURL(spot)) }>{ t(ctx, "dashboard.weak.drill") }</a>
 						</div>
 					}
 					if len(view.WeakSpots) > 1 {
-						<a class="mt-3.5 block w-full text-center bg-ink text-surface rounded-lg py-2.5 text-sm font-semibold hover:opacity-85" href={ templ.URL(drillURL(view.WeakSpots...)) }>Practice these together</a>
+						<a class="mt-3.5 block w-full text-center bg-ink text-surface rounded-lg py-2.5 text-sm font-semibold hover:opacity-85" href={ templ.URL(drillURL(view.WeakSpots...)) }>{ t(ctx, "dashboard.weak.together") }</a>
 					}
 				}
 			</div>
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
-				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Stats</h2>
+				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ t(ctx, "dashboard.stats.title") }</h2>
 				<div class="grid grid-cols-3 gap-3">
 					<div>
-						<div class="text-xs text-ink-muted mb-1">Streak</div>
+						<div class="text-xs text-ink-muted mb-1">{ t(ctx, "dashboard.stats.streak") }</div>
 						<div class="text-2xl font-semibold leading-tight">—</div>
 					</div>
 					<div>
-						<div class="text-xs text-ink-muted mb-1">Nodes</div>
+						<div class="text-xs text-ink-muted mb-1">{ t(ctx, "dashboard.stats.nodes") }</div>
 						<div class="text-2xl font-semibold leading-tight">{ fmt.Sprintf("%d", view.NodeCount) }</div>
 					</div>
 					<div>
-						<div class="text-xs text-ink-muted mb-1">Mastered</div>
+						<div class="text-xs text-ink-muted mb-1">{ t(ctx, "dashboard.stats.mastered") }</div>
 						<div class="text-2xl font-semibold leading-tight">{ fmt.Sprintf("%d", view.MasteredCount) }</div>
 					</div>
 				</div>

@@ -16,10 +16,10 @@ templ notesShowContent(node models.Node, contentHTML string, chat models.Chat, m
 			<div class="flex justify-between items-center mb-3.5">
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary">{ node.Title }</h2>
 				if node.Type == models.NodeTypeTopic {
-					<a class="text-xs text-ink-secondary hover:underline" href={ templ.URL(fmt.Sprintf("/topics/%d/practice", node.ID)) }>Practice</a>
+					<a class="text-xs text-ink-secondary hover:underline" href={ templ.URL(fmt.Sprintf("/topics/%d/practice", node.ID)) }>{ t(ctx, "note.practice") }</a>
 				} else {
 					<form method="POST" action={ templ.URL(fmt.Sprintf("/notes/%d/promote", node.ID)) }>
-						<button class="text-xs text-ink-secondary hover:underline" type="submit">Turn into topic</button>
+						<button class="text-xs text-ink-secondary hover:underline" type="submit">{ t(ctx, "note.promote") }</button>
 					</form>
 				}
 			</div>
@@ -27,7 +27,7 @@ templ notesShowContent(node models.Node, contentHTML string, chat models.Chat, m
 				@templ.Raw(contentHTML)
 			</div>
 			<p class="text-xs text-ink-muted mt-2">{ node.CreatedAt.Format("Jan 2, 2006 15:04") }</p>
-			<a class="inline-block mt-2 text-xs text-accent hover:underline" href="/notes">Back to notes</a>
+			<a class="inline-block mt-2 text-xs text-accent hover:underline" href="/notes">{ t(ctx, "note.back") }</a>
 		</div>
 		<div>
 			@chatPanel(chat, node.ID, messages, messageHTML, chatBusy)

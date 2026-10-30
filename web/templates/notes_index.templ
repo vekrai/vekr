@@ -13,10 +13,10 @@ templ NotesIndex(nodes []models.Node) {
 templ notesIndexContent(nodes []models.Node) {
 	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
 		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">
-			Notes <span class="text-ink-muted font-normal normal-case tracking-normal ml-1.5">{ fmt.Sprintf("%d items", len(nodes)) }</span>
+			{ t(ctx, "notes.title") } <span class="text-ink-muted font-normal normal-case tracking-normal ml-1.5">{ tCount(ctx, "notes.count", len(nodes), nil) }</span>
 		</h2>
 		if len(nodes) == 0 {
-			<p class="text-xs text-ink-muted">No notes yet.</p>
+			<p class="text-xs text-ink-muted">{ t(ctx, "notes.empty") }</p>
 		} else {
 			for _, node := range nodes {
 				<div class="text-sm py-2 border-b border-gridline last:border-b-0">
@@ -28,11 +28,11 @@ templ notesIndexContent(nodes []models.Node) {
 	</div>
 
 	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
-		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">New note</h2>
+		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ t(ctx, "notes.new") }</h2>
 		<form method="POST" action="/notes">
-			<input class="block w-full border border-black/10 rounded-lg bg-page text-ink text-sm p-2.5 mb-2" name="title" placeholder="Title" required/>
-			<textarea class="block w-full border border-black/10 rounded-lg bg-page text-ink text-sm p-2.5 mb-2 resize-none" name="content" placeholder="Content" rows="4"></textarea>
-			<button class="bg-ink text-surface rounded-lg py-2.5 px-4 text-sm font-semibold hover:opacity-85 cursor-pointer" type="submit">Create</button>
+			<input class="block w-full border border-black/10 rounded-lg bg-page text-ink text-sm p-2.5 mb-2" name="title" placeholder={ t(ctx, "notes.field.title") } required/>
+			<textarea class="block w-full border border-black/10 rounded-lg bg-page text-ink text-sm p-2.5 mb-2 resize-none" name="content" placeholder={ t(ctx, "notes.field.content") } rows="4"></textarea>
+			<button class="bg-ink text-surface rounded-lg py-2.5 px-4 text-sm font-semibold hover:opacity-85 cursor-pointer" type="submit">{ t(ctx, "notes.create") }</button>
 		</form>
 	</div>
 }

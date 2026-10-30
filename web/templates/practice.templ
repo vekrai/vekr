@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -21,13 +22,13 @@ templ PracticeIndex(topic models.Node, items []models.PracticeItem, latestAttemp
 
 templ practiceIndexContent(topic models.Node, items []models.PracticeItem, latestAttempts map[uint]models.Attempt, returnTo string) {
 	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
-		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Practice: { topic.Title }</h2>
+		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ tData(ctx, "practice.title", map[string]any{"Title": topic.Title}) }</h2>
 		if len(items) == 0 {
-			<p class="text-xs text-ink-muted">No practice items yet — <a class="text-accent hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", topic.ID)) }>ask V on the topic page</a> to generate some.</p>
+			<p class="text-xs text-ink-muted">{ t(ctx, "practice.empty") } <a class="text-accent hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", topic.ID)) }>{ t(ctx, "practice.empty_link") }</a></p>
 		} else {
 			@practiceItemList(items, latestAttempts, returnTo)
 		}
-		<a class="inline-block mt-3 text-xs text-accent hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", topic.ID)) }>Back to topic</a>
+		<a class="inline-block mt-3 text-xs text-accent hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", topic.ID)) }>{ t(ctx, "practice.back") }</a>
 	</div>
 }
 
@@ -37,13 +38,13 @@ templ PracticeDrill(concepts []models.Concept, items []models.PracticeItem, late
 
 templ practiceDrillContent(concepts []models.Concept, items []models.PracticeItem, latestAttempts map[uint]models.Attempt, returnTo string) {
 	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
-		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">Drill: { conceptNames(concepts) }</h2>
+		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ tData(ctx, "drill.title", map[string]any{"Concepts": conceptNames(concepts)}) }</h2>
 		if len(items) == 0 {
-			<p class="text-xs text-ink-muted">No practice items test these concepts yet.</p>
+			<p class="text-xs text-ink-muted">{ t(ctx, "drill.empty") }</p>
 		} else {
 			@practiceItemList(items, latestAttempts, returnTo)
 		}
-		<a class="inline-block mt-3 text-xs text-accent hover:underline" href="/">Back to dashboard</a>
+		<a class="inline-block mt-3 text-xs text-accent hover:underline" href="/">{ t(ctx, "drill.back") }</a>
 	</div>
 }
 
@@ -56,9 +57,9 @@ templ practiceItemList(items []models.PracticeItem, latestAttempts map[uint]mode
 				if attempt, ok := latestAttempts[item.ID]; ok {
 					<p class="text-xs mb-2">
 						if attempt.Passed != nil && *attempt.Passed {
-							<span class="text-accent">Passed</span>
+							<span class="text-accent">{ t(ctx, "practice.passed") }</span>
 						} else {
-							<span class="text-ink-secondary">Not yet</span>
+							<span class="text-ink-secondary">{ t(ctx, "practice.not_yet") }</span>
 						}
 						if attempt.AgentFeedback != "" {
 							<span class="text-ink-muted"> — { attempt.AgentFeedback }</span>
@@ -67,17 +68,17 @@ templ practiceItemList(items []models.PracticeItem, latestAttempts map[uint]mode
 				}
 				<form method="POST" action={ templ.URL(fmt.Sprintf("/practice_items/%d/attempts", item.ID)) }>
 					<input type="hidden" name="return_to" value={ returnTo }/>
-					<textarea class="block w-full border border-black/10 rounded-lg bg-page p-2 text-sm resize-none outline-none" name="submission" rows="2" placeholder={ submissionPlaceholder(item) }></textarea>
-					<button class="mt-2 bg-ink text-surface rounded-md py-1.5 px-3.5 text-sm font-semibold" type="submit">Submit</button>
+					<textarea class="block w-full border border-black/10 rounded-lg bg-page p-2 text-sm resize-none outline-none" name="submission" rows="2" placeholder={ submissionPlaceholder(ctx, item) }></textarea>
+					<button class="mt-2 bg-ink text-surface rounded-md py-1.5 px-3.5 text-sm font-semibold" type="submit">{ t(ctx, "practice.submit") }</button>
 				</form>
 			</div>
 		}
 	</div>
 }
 
-func submissionPlaceholder(item models.PracticeItem) string {
+func submissionPlaceholder(ctx context.Context, item models.PracticeItem) string {
 	if item.Type == models.PracticeItemTypeMCQ {
-		return "Answer with the option letter…"
+		return t(ctx, "practice.placeholder.mcq")
 	}
-	return "Your answer…"
+	return t(ctx, "practice.placeholder.default")
 }

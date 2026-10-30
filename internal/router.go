@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"vekr/internal/handlers"
+	"vekr/internal/i18n"
 )
 
 func NewRouter(app *App) http.Handler {
@@ -27,5 +28,5 @@ func NewRouter(app *App) http.Handler {
 	mux.HandleFunc("POST /practice_items/{id}/attempts", practice.Submit)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 
-	return Chain(mux, Recovery, Logging, app.Sessions.LoadAndSave)
+	return Chain(mux, Recovery, Logging, app.Sessions.LoadAndSave, i18n.Middleware(app.Sessions))
 }

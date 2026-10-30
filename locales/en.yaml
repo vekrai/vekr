@@ -1,0 +1,62 @@
+app.title: "Vekr"
+
+dashboard.queue.title: "Today's queue"
+dashboard.queue.empty: "Nothing queued — build a learning path or turn a note into a topic."
+dashboard.queue.start: "Start today's session"
+queue.kind.learn: "learn"
+queue.kind.practice: "practice"
+
+dashboard.paths.title: "Active learning paths"
+dashboard.paths.empty: "No learning paths yet — ask V in chat to build one."
+
+dashboard.mastered.title: "Mastered"
+dashboard.mastered.empty: "Nothing mastered yet."
+
+dashboard.recent.title: "Recent notes"
+
+dashboard.weak.title: "Weak spots"
+dashboard.weak.empty: "No weak spots tracked yet."
+dashboard.weak.missed:
+  one: "missed {{.Misses}} of {{.PluralCount}} attempt"
+  other: "missed {{.Misses}} of {{.PluralCount}} attempts"
+dashboard.weak.drill: "Drill"
+dashboard.weak.together: "Practice these together"
+
+dashboard.stats.title: "Stats"
+dashboard.stats.streak: "Streak"
+dashboard.stats.nodes: "Nodes"
+dashboard.stats.mastered: "Mastered"
+
+chat.title: "Chat with V"
+chat.save_as_note: "Save as note"
+chat.thinking: "V is thinking…"
+chat.placeholder: "Talk, paste material, or drop a file…"
+chat.send: "Send"
+
+notes.title: "Notes"
+notes.count:
+  one: "{{.PluralCount}} item"
+  other: "{{.PluralCount}} items"
+notes.empty: "No notes yet."
+notes.new: "New note"
+notes.field.title: "Title"
+notes.field.content: "Content"
+notes.create: "Create"
+
+note.practice: "Practice"
+note.promote: "Turn into topic"
+note.back: "Back to notes"
+
+practice.title: "Practice: {{.Title}}"
+practice.empty: "No practice items yet."
+practice.empty_link: "Ask V on the topic page to generate some."
+practice.back: "Back to topic"
+practice.passed: "Passed"
+practice.not_yet: "Not yet"
+practice.submit: "Submit"
+practice.placeholder.mcq: "Answer with the option letter…"
+practice.placeholder.default: "Your answer…"
+
+drill.title: "Drill: {{.Concepts}}"
+drill.empty: "No practice items test these concepts yet."
+drill.back: "Back to dashboard"
