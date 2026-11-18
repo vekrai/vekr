@@ -146,6 +146,20 @@ All UI strings go through `t(ctx, key)` in templates, and a test checks that eve
 
 To add another language: add `locales/<lang>.yaml` with the same keys as `locales/en.yaml`, extend the `locale` CHECK constraint on `settings` with a new migration, and replace the two-way toggle with a picker.
 
+## Contributing
+
+Contributions are welcome. For anything beyond a small fix, please open an issue first so we can agree on the approach.
+
+Before opening a pull request:
+
+- Run `mise run test` and make sure it passes.
+- Regenerate and commit generated files: `mise run templates:generate` after editing `.templ` files, `mise run css:build` after changing styles.
+- Put new UI strings in `locales/en.yaml` and add the same keys to `locales/zh.yaml`.
+- Add schema changes as a new migration in `db/migrations/`. Don't use foreign key constraints; referential cleanup happens in Go.
+- Keep pull requests focused on one change.
+
+By contributing, you agree that your contributions are licensed under the [MIT License](LICENSE).
+
 ## License
 
 [MIT](LICENSE)

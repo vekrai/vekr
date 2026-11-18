@@ -146,6 +146,20 @@ locales/                 en.yaml, zh.yaml
 
 添加其他语言的步骤：新增 `locales/<lang>.yaml`，包含与 `locales/en.yaml` 相同的 key；通过新迁移扩展 `settings` 表上 `locale` 的 CHECK 约束；把双语切换按钮改为语言选择器。
 
+## 参与贡献
+
+欢迎贡献代码。除小修复外，请先开一个 issue 讨论实现方案。
+
+提交 pull request 前：
+
+- 运行 `mise run test` 并确保通过。
+- 重新生成并提交生成文件：修改 `.templ` 后运行 `mise run templates:generate`，修改样式后运行 `mise run css:build`。
+- 新的界面文案写入 `locales/en.yaml`，并在 `locales/zh.yaml` 中添加相同的 key。
+- 数据库结构变更请在 `db/migrations/` 中新增迁移。不要使用外键约束，关联数据的清理在 Go 代码中完成。
+- 每个 pull request 只做一件事。
+
+提交贡献即表示你同意以 [MIT 许可证](LICENSE) 授权你的贡献。
+
 ## 许可证
 
 [MIT](LICENSE)
