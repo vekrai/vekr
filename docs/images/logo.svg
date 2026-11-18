@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" shape-rendering="geometricPrecision">
+  <title>Vekr</title>
+  <rect width="128" height="128" rx="32" fill="#0b0b0b"/>
+  <path d="M28 29H49.5L64 75.5L78.5 29H100L64 99Z" fill="#fcfcfb" stroke-linejoin="miter"/>
+</svg>

@@ -1,3 +1,5 @@
+<img src="docs/images/logo.svg" alt="Vekr logo" width="72">
+
 # Vekr
 
 [English](README.md) | [简体中文](README_zh_CN.md)
