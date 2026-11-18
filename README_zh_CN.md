@@ -1,4 +1,6 @@
-# Vekr [English](README.md) | [简体中文](README_zh_CN.md)
+# Vekr
+
+[English](README.md) | [简体中文](README_zh_CN.md)
 
 一个个人学习助手。和 **V** 聊天，把知识整理成笔记，再把笔记转为主题；通过自动生成的题目进行练习，由 AI 批改你的答案并追踪你的薄弱点。
 
@@ -72,9 +74,7 @@ cp .envrc.example .envrc
 
 ```sh
 createdb vekr_development
-createdb vekr_test
 mise run db:migrate
-APP_ENV=test mise run db:migrate
 ```
 
 可选：加载演示数据，包含一组英语语法主题、笔记、练习记录、薄弱点和聊天：
@@ -115,6 +115,16 @@ mise run js:vendor            # 升级版本后重新拉取 Turbo/Stimulus
 ```
 
 `db:migrate` 和 `db:reset` 作用于 `APP_ENV` 指定的数据库，例如 `APP_ENV=test mise run db:reset`。
+
+## 运行测试
+
+测试使用独立的 `vekr_test` 数据库：
+
+```sh
+createdb vekr_test
+APP_ENV=test mise run db:migrate
+mise run test
+```
 
 ## 项目结构
 

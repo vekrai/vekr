@@ -1,4 +1,6 @@
-# Vekr [English](README.md) | [简体中文](README_zh_CN.md)
+# Vekr
+
+[English](README.md) | [简体中文](README_zh_CN.md)
 
 A personal learning agent. Chat with **V** to collect knowledge into notes, turn notes into topics, practice them with generated questions, and let the agent grade your answers and track your weak spots.
 
@@ -68,13 +70,11 @@ Edit `.envrc`, then load it (with [direnv](https://direnv.net/), or `source .env
 | `AI_MAX_TOKENS_FIELD` | `max_tokens` | Override for providers that use e.g. `max_completion_tokens` |
 | `TAVILY_API_KEY` | | Optional key for the `websearch` tool |
 
-Create the databases and run migrations:
+Create the database and run migrations:
 
 ```sh
 createdb vekr_development
-createdb vekr_test
 mise run db:migrate
-APP_ENV=test mise run db:migrate
 ```
 
 Optionally load demo data, a set of English grammar topics with notes, practice attempts, weak spots, and chats:
@@ -115,6 +115,16 @@ mise run js:vendor            # re-fetch vendored Turbo/Stimulus after a version
 ```
 
 `db:migrate` and `db:reset` act on the database selected by `APP_ENV`, e.g. `APP_ENV=test mise run db:reset`.
+
+## Running tests
+
+Tests run against a separate `vekr_test` database:
+
+```sh
+createdb vekr_test
+APP_ENV=test mise run db:migrate
+mise run test
+```
 
 ## Project layout
 
