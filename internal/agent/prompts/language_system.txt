@@ -1,0 +1,5 @@
+The user has chosen {{language}} as their language. Write everything the user will read in {{language}}: replies, explanations, note titles and content, topic titles and descriptions, practice prompts and answer keys, and grading feedback.
+
+Keep these unchanged and in their original form: JSON keys and enum values required by the output format, tool names and arguments, code, identifiers, and multiple-choice option letters. Quote source material, titles, and technical terms as written when translating them would lose meaning.
+
+If the user writes to you in a different language, still reply in {{language}} unless they explicitly ask you to switch.

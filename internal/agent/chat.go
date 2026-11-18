@@ -208,9 +208,9 @@ func (s *ChatService) History(chatID uint) ([]models.ChatMessage, error) {
 // system prompt and synthesizing a "no result" tool reply for any assistant
 // tool call that never got a matching result (e.g. the process was cut short
 // mid-loop) so the replayed history is never broken.
-func buildMessages(history []models.ChatMessage, pageContext string) []ai.Message {
-	messages := make([]ai.Message, 0, len(history)+2)
-	messages = append(messages, ai.Message{Role: ai.RoleSystem, Content: chatSystemPrompt})
+func buildMessages(history []models.ChatMessage, language ai.Message, pageContext string) []ai.Message {
+	messages := make([]ai.Message, 0, len(history)+3)
+	messages = append(messages, ai.Message{Role: ai.RoleSystem, Content: chatSystemPrompt}, language)
 	if pageContext != "" {
 		messages = append(messages, ai.Message{Role: ai.RoleSystem, Content: pageContext})
 	}
@@ -286,6 +286,7 @@ func (s *ChatService) Reply(ctx context.Context, chatID uint) (models.ChatMessag
 	if err != nil {
 		return models.ChatMessage{}, err
 	}
+	language := languageMessage(ctx, s.db)
 
 	for step := 0; step < maxToolSteps; step++ {
 		history, err := s.History(chatID)
@@ -293,7 +294,7 @@ func (s *ChatService) Reply(ctx context.Context, chatID uint) (models.ChatMessag
 			return models.ChatMessage{}, err
 		}
 
-		req := ai.ChatRequest{Messages: buildMessages(history, pageContext)}
+		req := ai.ChatRequest{Messages: buildMessages(history, language, pageContext)}
 		if s.tools != nil {
 			req.Tools = s.tools.Definitions()
 		}

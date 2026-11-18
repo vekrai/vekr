@@ -41,6 +41,7 @@ type PreviewNote struct {
 func (s *CurriculumService) Preview(ctx context.Context, intake string) (CurriculumPreview, error) {
 	req := []ai.Message{
 		{Role: ai.RoleSystem, Content: curriculumSystemPrompt},
+		languageMessage(ctx, s.db),
 		{Role: ai.RoleUser, Content: intake},
 	}
 

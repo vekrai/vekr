@@ -33,4 +33,3 @@ func SettingLocale(db *gorm.DB) func(*http.Request) string {
 		return setting.Locale
 	}
 }
-

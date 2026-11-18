@@ -53,6 +53,7 @@ func (s *DistillService) Distill(ctx context.Context, chatID uint) (models.Node,
 
 	req := []ai.Message{
 		{Role: ai.RoleSystem, Content: distillSystemPrompt},
+		languageMessage(ctx, s.db),
 		{Role: ai.RoleUser, Content: transcript.String()},
 	}
 

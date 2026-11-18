@@ -205,7 +205,7 @@ func TestBuildMessagesSynthesizesDanglingToolCall(t *testing.T) {
 		{Role: "assistant", ToolCalls: string(toolCallsJSON)},
 	}
 
-	messages := buildMessages(history, "")
+	messages := buildMessages(history, ai.Message{Role: ai.RoleSystem, Content: languagePrompt(models.LocaleEnglish)}, "")
 
 	var sawSynthesized bool
 	for _, m := range messages {
@@ -370,5 +370,39 @@ func TestRecentChatsIncludesNoteChats(t *testing.T) {
 	}
 	if g, ok := byID[general.ID]; !ok || g.NodeID != nil || g.NodeTitle != nil {
 		t.Errorf("got general chat summary %+v (present=%v), want present with no node", g, ok)
+	}
+}
+
+func TestChatReplySendsChosenLanguagePrompt(t *testing.T) {
+	db := testDB(t)
+	db.Exec("DELETE FROM settings")
+	if _, err := models.ToggleLocale(db); err != nil {
+		t.Fatalf("ToggleLocale: %v", err)
+	}
+
+	var body string
+	service := newChatService(t, db, func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		body = string(raw)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"id": "resp-1", "choices": [{"message": {"role": "assistant", "content": "好"}, "finish_reason": "stop"}]}`)
+	})
+
+	chat, err := service.StartChat()
+	if err != nil {
+		t.Fatalf("StartChat: %v", err)
+	}
+	if _, err := service.SendMessage(context.Background(), chat.ID, "hi"); err != nil {
+		t.Fatalf("SendMessage: %v", err)
+	}
+
+	if !strings.Contains(body, "chosen Simplified Chinese") {
+		t.Errorf("request body missing Chinese language prompt:\n%s", body)
+	}
+}
+
+func TestLanguagePromptFallsBackToEnglish(t *testing.T) {
+	if got := languagePrompt("xx"); !strings.Contains(got, "chosen English") {
+		t.Errorf("languagePrompt(xx) = %q, want English", got)
 	}
 }

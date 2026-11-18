@@ -116,6 +116,7 @@ func (s *GradingService) judge(ctx context.Context, item models.PracticeItem, su
 	prompt := fmt.Sprintf("Prompt:\n%s\n\nReference answer (may be blank):\n%s\n\nSubmission:\n%s", item.Prompt, answerKey, submission)
 	req := []ai.Message{
 		{Role: ai.RoleSystem, Content: gradingSystemPrompt},
+		languageMessage(ctx, s.db),
 		{Role: ai.RoleUser, Content: prompt},
 	}
 

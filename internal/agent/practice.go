@@ -62,6 +62,7 @@ func (s *PracticeService) GenerateItems(ctx context.Context, topicID uint, count
 
 	req := []ai.Message{
 		{Role: ai.RoleSystem, Content: practiceSystemPrompt},
+		languageMessage(ctx, s.db),
 		{Role: ai.RoleUser, Content: prompt},
 	}
 
