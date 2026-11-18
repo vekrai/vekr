@@ -1,6 +1,7 @@
-<img src="docs/images/logo.svg" alt="Vekr logo" width="72">
-
-# Vekr
+<div align="center">
+  <img src="docs/images/logo.svg" alt="Vekr logo" width="72">
+  <h1>Vekr</h1>
+</div>
 
 [English](README.md) | [简体中文](README_zh_CN.md)
 
