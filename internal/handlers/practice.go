@@ -25,20 +25,20 @@ func NewPracticeHandler(db *gorm.DB, grading *agent.GradingService) *PracticeHan
 }
 
 func (h *PracticeHandler) Index(w http.ResponseWriter, r *http.Request) {
-	nodeID, err := strconv.ParseUint(r.PathValue("id"), 10, 64)
+	topicID, err := strconv.ParseUint(r.PathValue("id"), 10, 64)
 	if err != nil {
 		http.Error(w, "invalid topic id", http.StatusBadRequest)
 		return
 	}
 
-	var topic models.Node
-	if err := h.db.First(&topic, nodeID).Error; err != nil {
+	var topic models.Topic
+	if err := h.db.First(&topic, topicID).Error; err != nil {
 		http.NotFound(w, r)
 		return
 	}
 
 	var items []models.PracticeItem
-	if err := h.db.Where("node_id = ?", nodeID).Order("created_at, id").Find(&items).Error; err != nil {
+	if err := h.db.Where("topic_id = ?", topicID).Order("created_at, id").Find(&items).Error; err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -76,13 +76,13 @@ func (h *PracticeHandler) Drill(w http.ResponseWriter, r *http.Request) {
 	var items []models.PracticeItem
 	err := h.db.
 		Where("id IN (SELECT practice_item_id FROM practice_item_concepts WHERE concept_id IN ?)", conceptIDs).
-		Order("node_id, created_at, id").
+		Order("topic_id, created_at, id").
 		Find(&items).Error
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	items = interleaveByNode(items)
+	items = interleaveByTopic(items)
 	if len(items) > drillItemLimit {
 		items = items[:drillItemLimit]
 	}
@@ -116,7 +116,7 @@ func (h *PracticeHandler) Submit(w http.ResponseWriter, r *http.Request) {
 
 	returnTo := r.FormValue("return_to")
 	if !isLocalPath(returnTo) {
-		returnTo = fmt.Sprintf("/topics/%d/practice", item.NodeID)
+		returnTo = fmt.Sprintf("/topics/%d/practice", item.TopicID)
 	}
 	http.Redirect(w, r, returnTo, http.StatusSeeOther)
 }
@@ -149,22 +149,22 @@ func (h *PracticeHandler) latestAttempts(items []models.PracticeItem) (map[uint]
 	return latest, nil
 }
 
-func interleaveByNode(items []models.PracticeItem) []models.PracticeItem {
+func interleaveByTopic(items []models.PracticeItem) []models.PracticeItem {
 	var order []uint
 	groups := make(map[uint][]models.PracticeItem)
 	for _, item := range items {
-		if _, seen := groups[item.NodeID]; !seen {
-			order = append(order, item.NodeID)
+		if _, seen := groups[item.TopicID]; !seen {
+			order = append(order, item.TopicID)
 		}
-		groups[item.NodeID] = append(groups[item.NodeID], item)
+		groups[item.TopicID] = append(groups[item.TopicID], item)
 	}
 
 	out := make([]models.PracticeItem, 0, len(items))
 	for len(out) < len(items) {
-		for _, nodeID := range order {
-			if group := groups[nodeID]; len(group) > 0 {
+		for _, topicID := range order {
+			if group := groups[topicID]; len(group) > 0 {
 				out = append(out, group[0])
-				groups[nodeID] = group[1:]
+				groups[topicID] = group[1:]
 			}
 		}
 	}

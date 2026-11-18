@@ -224,7 +224,11 @@ func TestBuildMessagesSynthesizesDanglingToolCall(t *testing.T) {
 func TestChatServiceNodeChatSendsPageContext(t *testing.T) {
 	db := testDB(t)
 
-	node := models.Node{Title: "Binary search", Content: "Halve the range each step.", Type: models.NodeTypeTopic}
+	topic := models.Topic{Title: "Algorithms"}
+	if err := db.Create(&topic).Error; err != nil {
+		t.Fatalf("create topic: %v", err)
+	}
+	node := models.Node{Title: "Binary search", Content: "Halve the range each step.", TopicID: &topic.ID}
 	if err := db.Create(&node).Error; err != nil {
 		t.Fatalf("create node: %v", err)
 	}
@@ -246,9 +250,13 @@ func TestChatServiceNodeChatSendsPageContext(t *testing.T) {
 		t.Fatalf("SendMessage: %v", err)
 	}
 
-	want := fmt.Sprintf("node_id %d, a topic titled \\\"Binary search\\\"", node.ID)
+	want := fmt.Sprintf("node_id %d, a note titled \\\"Binary search\\\"", node.ID)
 	if !strings.Contains(body, want) {
 		t.Errorf("request body missing page context %q:\n%s", want, body)
+	}
+	wantTopic := fmt.Sprintf("topic_id %d titled \\\"Algorithms\\\"", topic.ID)
+	if !strings.Contains(body, wantTopic) {
+		t.Errorf("request body missing topic context %q:\n%s", wantTopic, body)
 	}
 
 	current, err := service.CurrentChat()

@@ -3,8 +3,10 @@ package agent
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"gorm.io/gorm"
@@ -25,12 +27,19 @@ func newPracticeService(t *testing.T, db *gorm.DB, handler http.HandlerFunc) *Pr
 func TestPracticeGenerateItemsCreatesItemsAndConceptLinks(t *testing.T) {
 	db := testDB(t)
 
-	topic := models.Node{Title: "Binary search", Content: "Search a sorted array in O(log n).", Type: models.NodeTypeTopic}
+	topic := models.Topic{Title: "Binary search", Content: "Search a sorted array in O(log n)."}
 	if err := db.Create(&topic).Error; err != nil {
 		t.Fatalf("create topic: %v", err)
 	}
+	note := models.Node{Title: "Loop invariant", Content: "lo <= target <= hi", TopicID: &topic.ID}
+	if err := db.Create(&note).Error; err != nil {
+		t.Fatalf("create note: %v", err)
+	}
 
+	var body string
 	service := newPracticeService(t, db, func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		body = string(raw)
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{
 			"id": "resp-1",
@@ -48,6 +57,9 @@ func TestPracticeGenerateItemsCreatesItemsAndConceptLinks(t *testing.T) {
 	if len(items) != 2 {
 		t.Fatalf("got %d items, want 2", len(items))
 	}
+	if !strings.Contains(body, "Loop invariant") {
+		t.Errorf("request body missing the topic's note content:\n%s", body)
+	}
 
 	var concepts []models.Concept
 	if err := db.Where("name IN ?", []string{"binary-search", "pointers"}).Find(&concepts).Error; err != nil {
@@ -57,12 +69,15 @@ func TestPracticeGenerateItemsCreatesItemsAndConceptLinks(t *testing.T) {
 		t.Fatalf("got %d concepts, want 2 (deduplicated)", len(concepts))
 	}
 
-	var nodeConceptCount int64
-	if err := db.Model(&models.NodeConcept{}).Where("node_id = ?", topic.ID).Count(&nodeConceptCount).Error; err != nil {
-		t.Fatalf("count node_concepts: %v", err)
+	for _, c := range concepts {
+		if c.TopicID == nil || *c.TopicID != topic.ID {
+			t.Errorf("got concept %q TopicID %v, want %d", c.Name, c.TopicID, topic.ID)
+		}
 	}
-	if nodeConceptCount != 2 {
-		t.Errorf("got %d node_concepts, want 2", nodeConceptCount)
+	for _, item := range items {
+		if item.TopicID != topic.ID {
+			t.Errorf("got item TopicID %d, want %d", item.TopicID, topic.ID)
+		}
 	}
 
 	var itemConceptCount int64
@@ -77,7 +92,7 @@ func TestPracticeGenerateItemsCreatesItemsAndConceptLinks(t *testing.T) {
 func TestPracticeGenerateItemsReusesExistingConcept(t *testing.T) {
 	db := testDB(t)
 
-	topic := models.Node{Title: "Topic A", Content: "content", Type: models.NodeTypeTopic}
+	topic := models.Topic{Title: "Topic A", Content: "content"}
 	if err := db.Create(&topic).Error; err != nil {
 		t.Fatalf("create topic: %v", err)
 	}
@@ -114,7 +129,7 @@ func TestPracticeGenerateItemsReusesExistingConcept(t *testing.T) {
 func TestPracticeGenerateItemsSkipsUnknownType(t *testing.T) {
 	db := testDB(t)
 
-	topic := models.Node{Title: "Topic", Content: "content", Type: models.NodeTypeTopic}
+	topic := models.Topic{Title: "Topic", Content: "content"}
 	if err := db.Create(&topic).Error; err != nil {
 		t.Fatalf("create topic: %v", err)
 	}

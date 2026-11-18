@@ -17,8 +17,8 @@ func NewPracticeTools(service *PracticeService) *PracticeTools {
 	return &PracticeTools{service: service}
 }
 
-func (t *PracticeTools) GenerateItems(ctx context.Context, nodeID uint, count int) (string, error) {
-	items, err := t.service.GenerateItems(ctx, nodeID, count)
+func (t *PracticeTools) GenerateItems(ctx context.Context, topicID uint, count int) (string, error) {
+	items, err := t.service.GenerateItems(ctx, topicID, count)
 	if err != nil {
 		return "", err
 	}

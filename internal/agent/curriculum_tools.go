@@ -39,11 +39,15 @@ func (t *CurriculumTools) GeneratePreview(ctx context.Context, intake string) (s
 	t.mu.Unlock()
 
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "Proposed path: %s\n\n", preview.PathTitle)
-	for _, topic := range preview.Topics {
-		fmt.Fprintf(&sb, "- %s", topic.Title)
-		if len(topic.Prerequisites) > 0 {
-			fmt.Fprintf(&sb, " (requires: %s)", strings.Join(topic.Prerequisites, ", "))
+	fmt.Fprintf(&sb, "Proposed topic: %s\n", preview.TopicTitle)
+	if preview.TopicContent != "" {
+		fmt.Fprintf(&sb, "%s\n", preview.TopicContent)
+	}
+	sb.WriteString("\nNotes:\n")
+	for _, note := range preview.Notes {
+		fmt.Fprintf(&sb, "- %s", note.Title)
+		if len(note.Prerequisites) > 0 {
+			fmt.Fprintf(&sb, " (requires: %s)", strings.Join(note.Prerequisites, ", "))
 		}
 		sb.WriteString("\n")
 	}
@@ -60,7 +64,7 @@ func (t *CurriculumTools) CommitPreview(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("no pending curriculum preview to commit — call generate_curriculum_preview first")
 	}
 
-	path, err := t.service.Commit(ctx, preview)
+	topic, err := t.service.Commit(ctx, preview)
 	if err != nil {
 		return "", err
 	}
@@ -68,5 +72,5 @@ func (t *CurriculumTools) CommitPreview(ctx context.Context) (string, error) {
 	delete(t.previews, chatID)
 	t.mu.Unlock()
 
-	return fmt.Sprintf("Committed learning path %q (id=%d) with %d topics.", path.Title, path.ID, len(preview.Topics)), nil
+	return fmt.Sprintf("Committed topic %q (topic_id=%d) with %d notes.", topic.Title, topic.ID, len(preview.Notes)), nil
 }

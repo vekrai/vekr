@@ -37,8 +37,8 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	masteredScope := h.db.Where("type = ? AND status = ?", models.NodeTypeTopic, models.StatusMastered).Session(&gorm.Session{})
-	if err := masteredScope.Model(&models.Node{}).Count(&view.MasteredCount).Error; err != nil {
+	masteredScope := h.db.Where("status = ?", models.StatusMastered).Session(&gorm.Session{})
+	if err := masteredScope.Model(&models.Topic{}).Count(&view.MasteredCount).Error; err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -48,7 +48,7 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var err error
-	if view.PathProgress, err = h.loadPathProgress(); err != nil {
+	if view.TopicProgress, err = loadTopicProgress(h.db, ""); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -96,15 +96,15 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 func (h *DashboardHandler) loadQueue() ([]models.QueueItem, error) {
 	var queue []models.QueueItem
 	err := h.db.Raw(`
-		SELECT n.id AS node_id, n.title, COUNT(DISTINCT pi.id) AS item_count
-		FROM nodes n
-		LEFT JOIN practice_items pi ON pi.node_id = n.id
+		SELECT t.id AS topic_id, t.title, COUNT(DISTINCT pi.id) AS item_count
+		FROM topics t
+		LEFT JOIN practice_items pi ON pi.topic_id = t.id
 		LEFT JOIN attempts a ON a.practice_item_id = pi.id
-		WHERE n.type = ? AND (n.status IS NULL OR n.status <> ?)
-		GROUP BY n.id, n.title
-		ORDER BY GREATEST(n.updated_at, MAX(a.created_at)) DESC, n.id DESC
+		WHERE t.status <> ?
+		GROUP BY t.id, t.title
+		ORDER BY GREATEST(t.updated_at, MAX(a.created_at)) DESC, t.id DESC
 		LIMIT ?
-	`, models.NodeTypeTopic, models.StatusMastered, dashboardListLimit).Scan(&queue).Error
+	`, models.StatusMastered, dashboardListLimit).Scan(&queue).Error
 	return queue, err
 }
 
@@ -121,35 +121,44 @@ func (h *DashboardHandler) loadWeakSpots() ([]models.WeakSpot, error) {
 	return spots, err
 }
 
-type pathProgressRow struct {
-	ID       uint
-	Title    string
-	Total    int64
-	Mastered int64
+type topicProgressRow struct {
+	models.Topic
+	Total  int64
+	Passed int64
 }
 
-func (h *DashboardHandler) loadPathProgress() ([]models.PathProgress, error) {
-	var rows []pathProgressRow
-	err := h.db.Raw(`
-		SELECT p.id, p.title,
-		       COUNT(n.id) AS total,
-		       COUNT(n.id) FILTER (WHERE n.status = ?) AS mastered
-		FROM paths p
-		LEFT JOIN nodes n ON n.path_id = p.id AND n.type = ?
-		GROUP BY p.id, p.title
-		ORDER BY p.created_at DESC
-	`, models.StatusMastered, models.NodeTypeTopic).Scan(&rows).Error
+func loadTopicProgress(db *gorm.DB, where string, args ...any) ([]models.TopicProgress, error) {
+	if where == "" {
+		where = "TRUE"
+	}
+	var rows []topicProgressRow
+	err := db.Raw(`
+		SELECT t.*,
+		       COUNT(pi.id) AS total,
+		       COUNT(pi.id) FILTER (
+		           WHERE latest.passed
+		             AND NOT EXISTS (SELECT 1 FROM mistake_log m WHERE m.attempt_id = latest.id)
+		       ) AS passed
+		FROM topics t
+		LEFT JOIN practice_items pi ON pi.topic_id = t.id
+		LEFT JOIN LATERAL (
+		    SELECT a.id, a.passed
+		      FROM attempts a
+		     WHERE a.practice_item_id = pi.id
+		     ORDER BY a.created_at DESC, a.id DESC
+		     LIMIT 1
+		) latest ON true
+		WHERE `+where+`
+		GROUP BY t.id
+		ORDER BY t.created_at DESC
+	`, args...).Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
 
-	progress := make([]models.PathProgress, len(rows))
+	progress := make([]models.TopicProgress, len(rows))
 	for i, row := range rows {
-		progress[i] = models.PathProgress{
-			Path:     models.Path{ID: row.ID, Title: row.Title},
-			Total:    row.Total,
-			Mastered: row.Mastered,
-		}
+		progress[i] = models.TopicProgress{Topic: row.Topic, Total: row.Total, Passed: row.Passed}
 	}
 	return progress, nil
 }

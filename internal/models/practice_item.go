@@ -11,7 +11,7 @@ const (
 
 type PracticeItem struct {
 	ID        uint `gorm:"primaryKey"`
-	NodeID    uint
+	TopicID   uint
 	Prompt    string
 	AnswerKey *string
 	Type      string

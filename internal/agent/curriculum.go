@@ -27,20 +27,17 @@ func NewCurriculumService(db *gorm.DB, client *ai.Client) *CurriculumService {
 }
 
 type CurriculumPreview struct {
-	PathTitle string         `json:"path_title"`
-	Topics    []PreviewTopic `json:"topics"`
+	TopicTitle   string        `json:"topic_title"`
+	TopicContent string        `json:"topic_content"`
+	Notes        []PreviewNote `json:"notes"`
 }
 
-type PreviewTopic struct {
+type PreviewNote struct {
 	Title         string   `json:"title"`
 	Content       string   `json:"content"`
 	Prerequisites []string `json:"prerequisites"`
 }
 
-// Preview turns a goal or pasted material into a proposed curriculum — a
-// Path plus a batch of prerequisite-linked Topics — without persisting
-// anything. The caller holds the result (e.g. in the session) until the
-// user approves it via Commit.
 func (s *CurriculumService) Preview(ctx context.Context, intake string) (CurriculumPreview, error) {
 	req := []ai.Message{
 		{Role: ai.RoleSystem, Content: curriculumSystemPrompt},
@@ -51,55 +48,41 @@ func (s *CurriculumService) Preview(ctx context.Context, intake string) (Curricu
 	if err != nil {
 		return CurriculumPreview{}, fmt.Errorf("agent: curriculum preview: %w", err)
 	}
-	if preview.PathTitle == "" || len(preview.Topics) == 0 {
-		return CurriculumPreview{}, fmt.Errorf("agent: curriculum preview: model returned no path title or no topics")
+	if preview.TopicTitle == "" || len(preview.Notes) == 0 {
+		return CurriculumPreview{}, fmt.Errorf("agent: curriculum preview: model returned no topic title or no notes")
 	}
 	return preview, nil
 }
 
-// Commit persists a previously generated CurriculumPreview: one Path row,
-// one Topic node per preview topic, and a prerequisite_of node_link per
-// declared prerequisite. Runs in a transaction so a partial graph is never
-// left behind on failure.
-func (s *CurriculumService) Commit(ctx context.Context, preview CurriculumPreview) (models.Path, error) {
-	var path models.Path
+func (s *CurriculumService) Commit(ctx context.Context, preview CurriculumPreview) (models.Topic, error) {
+	var topic models.Topic
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		path = models.Path{Title: preview.PathTitle}
-		if err := tx.Create(&path).Error; err != nil {
-			return fmt.Errorf("save path: %w", err)
+		topic = models.Topic{Title: preview.TopicTitle, Content: preview.TopicContent, Status: models.StatusNotStarted}
+		if err := tx.Create(&topic).Error; err != nil {
+			return fmt.Errorf("save topic: %w", err)
 		}
 
-		topicsByTitle := make(map[string]models.Node, len(preview.Topics))
-		for _, topic := range preview.Topics {
-			pathID := path.ID
-			status := models.StatusNotStarted
-			node := models.Node{
-				Title:   topic.Title,
-				Content: topic.Content,
-				Type:    models.NodeTypeTopic,
-				PathID:  &pathID,
-				Status:  &status,
-			}
+		notesByTitle := make(map[string]models.Node, len(preview.Notes))
+		for _, note := range preview.Notes {
+			topicID := topic.ID
+			node := models.Node{Title: note.Title, Content: note.Content, TopicID: &topicID}
 			if err := tx.Create(&node).Error; err != nil {
-				return fmt.Errorf("save topic %q: %w", topic.Title, err)
+				return fmt.Errorf("save note %q: %w", note.Title, err)
 			}
-			topicsByTitle[topic.Title] = node
+			notesByTitle[note.Title] = node
 		}
 
-		for _, topic := range preview.Topics {
-			node := topicsByTitle[topic.Title]
-			for _, prereqTitle := range topic.Prerequisites {
-				prereq, ok := topicsByTitle[prereqTitle]
+		for _, note := range preview.Notes {
+			node := notesByTitle[note.Title]
+			for _, prereqTitle := range note.Prerequisites {
+				prereq, ok := notesByTitle[prereqTitle]
 				if !ok {
-					// The model referenced a prerequisite outside this
-					// batch — skip the link rather than fail the whole
-					// commit over one bad cross-reference.
 					continue
 				}
 				link := models.NodeLink{FromNodeID: prereq.ID, ToNodeID: node.ID, Relation: models.RelationPrerequisiteOf}
 				if err := tx.Create(&link).Error; err != nil {
-					return fmt.Errorf("save prerequisite link %q -> %q: %w", prereqTitle, topic.Title, err)
+					return fmt.Errorf("save prerequisite link %q -> %q: %w", prereqTitle, note.Title, err)
 				}
 			}
 		}
@@ -107,27 +90,32 @@ func (s *CurriculumService) Commit(ctx context.Context, preview CurriculumPrevie
 		return nil
 	})
 	if err != nil {
-		return models.Path{}, fmt.Errorf("agent: curriculum commit: %w", err)
+		return models.Topic{}, fmt.Errorf("agent: curriculum commit: %w", err)
 	}
 
-	return path, nil
+	return topic, nil
 }
 
-// PromoteToTopic turns an existing Note into a Topic — a metadata update
-// only, per the Note/Topic design (same row, no migration). It does not
-// assign a Path; that stays nil until the note is added to one.
-func (s *CurriculumService) PromoteToTopic(ctx context.Context, nodeID uint) (models.Node, error) {
-	updates := map[string]any{
-		"type":   models.NodeTypeTopic,
-		"status": models.StatusNotStarted,
-	}
-	if err := s.db.WithContext(ctx).Model(&models.Node{}).Where("id = ?", nodeID).Updates(updates).Error; err != nil {
-		return models.Node{}, fmt.Errorf("agent: promote to topic: %w", err)
-	}
+func (s *CurriculumService) PromoteToTopic(ctx context.Context, nodeID uint) (models.Topic, error) {
+	var topic models.Topic
 
-	var node models.Node
-	if err := s.db.WithContext(ctx).First(&node, nodeID).Error; err != nil {
-		return models.Node{}, fmt.Errorf("agent: promote to topic: reload: %w", err)
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var node models.Node
+		if err := tx.First(&node, nodeID).Error; err != nil {
+			return fmt.Errorf("note %d not found", nodeID)
+		}
+		if node.TopicID != nil {
+			return tx.First(&topic, *node.TopicID).Error
+		}
+
+		topic = models.Topic{Title: node.Title, Status: models.StatusNotStarted}
+		if err := tx.Create(&topic).Error; err != nil {
+			return fmt.Errorf("save topic: %w", err)
+		}
+		return tx.Model(&models.Node{}).Where("id = ?", nodeID).Update("topic_id", topic.ID).Error
+	})
+	if err != nil {
+		return models.Topic{}, fmt.Errorf("agent: promote to topic: %w", err)
 	}
-	return node, nil
+	return topic, nil
 }

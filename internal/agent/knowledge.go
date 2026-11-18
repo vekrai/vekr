@@ -20,6 +20,7 @@ func NewKnowledgeTools(db *gorm.DB) *KnowledgeTools {
 
 type noteSearchResult struct {
 	NodeID  uint   `gorm:"column:node_id"`
+	TopicID *uint  `gorm:"column:topic_id"`
 	Title   string `gorm:"column:title"`
 	Snippet string `gorm:"column:snippet"`
 }
@@ -43,12 +44,12 @@ func (k *KnowledgeTools) SearchNotes(ctx context.Context, query string) (string,
 	var rows []noteSearchResult
 	err := k.db.WithContext(ctx).Raw(`
 		WITH candidates AS (
-			SELECT id, title, content,
+			SELECT id, topic_id, title, content,
 			       to_tsvector('english', title || ' ' || content) AS tsv,
 			       plainto_tsquery('english', ?) AS tsq
 			FROM nodes
 		)
-		SELECT id AS node_id, title,
+		SELECT id AS node_id, topic_id, title,
 		       CASE
 		           WHEN tsv @@ tsq THEN ts_headline('english', content, tsq, 'MaxFragments=1,MaxWords=25')
 		           ELSE left(content, 160)
@@ -70,7 +71,11 @@ func (k *KnowledgeTools) SearchNotes(ctx context.Context, query string) (string,
 
 	var sb strings.Builder
 	for _, row := range rows {
-		fmt.Fprintf(&sb, "node_id=%d title=%q\n%s\n\n", row.NodeID, row.Title, row.Snippet)
+		fmt.Fprintf(&sb, "node_id=%d", row.NodeID)
+		if row.TopicID != nil {
+			fmt.Fprintf(&sb, " topic_id=%d", *row.TopicID)
+		}
+		fmt.Fprintf(&sb, " title=%q\n%s\n\n", row.Title, row.Snippet)
 	}
 	return strings.TrimSpace(sb.String()), nil
 }

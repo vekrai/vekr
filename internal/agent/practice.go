@@ -37,17 +37,29 @@ type generatedItem struct {
 	Concepts  []string `json:"concepts"`
 }
 
-// GenerateItems creates count practice items for a topic node, picking a
+// GenerateItems creates count practice items for a topic, picking a
 // type (mcq/flashcard/open/code) per item contextually — one generic
 // generator, no per-domain templates. Commits directly: practice items are
 // cheap to regenerate or delete, so there's no preview step.
-func (s *PracticeService) GenerateItems(ctx context.Context, nodeID uint, count int) ([]models.PracticeItem, error) {
-	var topic models.Node
-	if err := s.db.WithContext(ctx).First(&topic, nodeID).Error; err != nil {
-		return nil, fmt.Errorf("agent: generate practice items: topic %d not found", nodeID)
+func (s *PracticeService) GenerateItems(ctx context.Context, topicID uint, count int) ([]models.PracticeItem, error) {
+	var topic models.Topic
+	if err := s.db.WithContext(ctx).First(&topic, topicID).Error; err != nil {
+		return nil, fmt.Errorf("agent: generate practice items: topic %d not found", topicID)
 	}
 
-	prompt := fmt.Sprintf("Topic: %s\n\n%s\n\nGenerate %d practice items.", topic.Title, topic.Content, count)
+	var notes []models.Node
+	if err := s.db.WithContext(ctx).Where("topic_id = ?", topicID).Order("id").Find(&notes).Error; err != nil {
+		return nil, fmt.Errorf("agent: generate practice items: load notes: %w", err)
+	}
+
+	var material strings.Builder
+	fmt.Fprintf(&material, "Topic: %s\n\n%s\n", topic.Title, topic.Content)
+	for _, note := range notes {
+		fmt.Fprintf(&material, "\n## %s\n\n%s\n", note.Title, note.Content)
+	}
+	fmt.Fprintf(&material, "\nGenerate %d practice items.", count)
+	prompt := material.String()
+
 	req := []ai.Message{
 		{Role: ai.RoleSystem, Content: practiceSystemPrompt},
 		{Role: ai.RoleUser, Content: prompt},
@@ -72,7 +84,7 @@ func (s *PracticeService) GenerateItems(ctx context.Context, nodeID uint, count 
 			default:
 				continue
 			}
-			item := models.PracticeItem{NodeID: nodeID, Prompt: gi.Prompt, Type: gi.Type}
+			item := models.PracticeItem{TopicID: topicID, Prompt: gi.Prompt, Type: gi.Type}
 			if gi.AnswerKey != "" {
 				item.AnswerKey = &gi.AnswerKey
 			}
@@ -81,12 +93,9 @@ func (s *PracticeService) GenerateItems(ctx context.Context, nodeID uint, count 
 			}
 
 			for _, name := range gi.Concepts {
-				concept, err := findOrCreateConcept(tx, topic.PathID, name)
+				concept, err := findOrCreateConcept(tx, topicID, name)
 				if err != nil {
 					return err
-				}
-				if err := tx.Exec(`INSERT INTO node_concepts (node_id, concept_id) VALUES (?, ?) ON CONFLICT DO NOTHING`, nodeID, concept.ID).Error; err != nil {
-					return fmt.Errorf("link topic to concept %q: %w", name, err)
 				}
 				if err := tx.Exec(`INSERT INTO practice_item_concepts (practice_item_id, concept_id) VALUES (?, ?) ON CONFLICT DO NOTHING`, item.ID, concept.ID).Error; err != nil {
 					return fmt.Errorf("link practice item to concept %q: %w", name, err)
@@ -107,14 +116,9 @@ func (s *PracticeService) GenerateItems(ctx context.Context, nodeID uint, count 
 	return items, nil
 }
 
-func findOrCreateConcept(tx *gorm.DB, pathID *uint, name string) (models.Concept, error) {
+func findOrCreateConcept(tx *gorm.DB, topicID uint, name string) (models.Concept, error) {
 	var concept models.Concept
-	query := tx.Where("name = ?", name)
-	if pathID != nil {
-		query = query.Where("path_id = ?", *pathID)
-	} else {
-		query = query.Where("path_id IS NULL")
-	}
+	query := tx.Where("name = ? AND topic_id = ?", name, topicID)
 
 	err := query.First(&concept).Error
 	if err == nil {
@@ -124,7 +128,7 @@ func findOrCreateConcept(tx *gorm.DB, pathID *uint, name string) (models.Concept
 		return models.Concept{}, fmt.Errorf("find concept %q: %w", name, err)
 	}
 
-	concept = models.Concept{PathID: pathID, Name: name}
+	concept = models.Concept{TopicID: &topicID, Name: name}
 	if err := tx.Create(&concept).Error; err != nil {
 		return models.Concept{}, fmt.Errorf("create concept %q: %w", name, err)
 	}

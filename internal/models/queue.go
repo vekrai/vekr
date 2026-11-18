@@ -8,7 +8,7 @@ const (
 )
 
 type QueueItem struct {
-	NodeID    uint
+	TopicID   uint
 	Title     string
 	ItemCount int64
 }

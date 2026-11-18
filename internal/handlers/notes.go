@@ -70,7 +70,15 @@ func (h *NotesHandler) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	templates.NotesShow(node, contentHTML, chat, messages, messageHTML, chat.ID != 0 && h.chat.Busy(chat.ID)).Render(r.Context(), w)
+	var topic *models.Topic
+	if node.TopicID != nil {
+		var found models.Topic
+		if err := h.db.First(&found, *node.TopicID).Error; err == nil {
+			topic = &found
+		}
+	}
+
+	templates.NotesShow(node, topic, contentHTML, chat, messages, messageHTML, chat.ID != 0 && h.chat.Busy(chat.ID)).Render(r.Context(), w)
 }
 
 func (h *NotesHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -92,10 +100,11 @@ func (h *NotesHandler) Promote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := h.curriculum.PromoteToTopic(r.Context(), uint(nodeID)); err != nil {
+	topic, err := h.curriculum.PromoteToTopic(r.Context(), uint(nodeID))
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/notes/%d", nodeID), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/topics/%d", topic.ID), http.StatusSeeOther)
 }

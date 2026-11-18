@@ -16,19 +16,19 @@ func conceptNames(concepts []models.Concept) string {
 	return strings.Join(names, ", ")
 }
 
-templ PracticeIndex(topic models.Node, items []models.PracticeItem, latestAttempts map[uint]models.Attempt, returnTo string) {
+templ PracticeIndex(topic models.Topic, items []models.PracticeItem, latestAttempts map[uint]models.Attempt, returnTo string) {
 	@layout(practiceIndexContent(topic, items, latestAttempts, returnTo))
 }
 
-templ practiceIndexContent(topic models.Node, items []models.PracticeItem, latestAttempts map[uint]models.Attempt, returnTo string) {
+templ practiceIndexContent(topic models.Topic, items []models.PracticeItem, latestAttempts map[uint]models.Attempt, returnTo string) {
 	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
 		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ tData(ctx, "practice.title", map[string]any{"Title": topic.Title}) }</h2>
 		if len(items) == 0 {
-			<p class="text-xs text-ink-muted">{ t(ctx, "practice.empty") } <a class="text-accent hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", topic.ID)) }>{ t(ctx, "practice.empty_link") }</a></p>
+			<p class="text-xs text-ink-muted">{ t(ctx, "practice.empty") }</p>
 		} else {
 			@practiceItemList(items, latestAttempts, returnTo)
 		}
-		<a class="inline-block mt-3 text-xs text-accent hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", topic.ID)) }>{ t(ctx, "practice.back") }</a>
+		<a class="inline-block mt-3 text-xs text-accent hover:underline" href={ templ.URL(fmt.Sprintf("/topics/%d", topic.ID)) }>{ t(ctx, "practice.back") }</a>
 	</div>
 }
 

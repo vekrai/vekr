@@ -30,7 +30,7 @@ func TestCurriculumPreviewAndCommit(t *testing.T) {
 		fmt.Fprint(w, `{
 			"id": "resp-1",
 			"choices": [{
-				"message": {"role": "assistant", "content": "{\"path_title\":\"Algorithms\",\"topics\":[{\"title\":\"Arrays\",\"content\":\"Array basics\",\"prerequisites\":[]},{\"title\":\"Two pointers\",\"content\":\"Two pointer technique\",\"prerequisites\":[\"Arrays\"]}]}"},
+				"message": {"role": "assistant", "content": "{\"topic_title\":\"Algorithms\",\"topic_content\":\"Core algorithms\",\"notes\":[{\"title\":\"Arrays\",\"content\":\"Array basics\",\"prerequisites\":[]},{\"title\":\"Two pointers\",\"content\":\"Two pointer technique\",\"prerequisites\":[\"Arrays\"]}]}"},
 				"finish_reason": "stop"
 			}]
 		}`)
@@ -40,37 +40,32 @@ func TestCurriculumPreviewAndCommit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Preview: %v", err)
 	}
-	if preview.PathTitle != "Algorithms" || len(preview.Topics) != 2 {
-		t.Fatalf("got preview %+v, want path title Algorithms with 2 topics", preview)
+	if preview.TopicTitle != "Algorithms" || len(preview.Notes) != 2 {
+		t.Fatalf("got preview %+v, want topic title Algorithms with 2 notes", preview)
 	}
 
-	path, err := service.Commit(context.Background(), preview)
+	topic, err := service.Commit(context.Background(), preview)
 	if err != nil {
 		t.Fatalf("Commit: %v", err)
 	}
-	if path.Title != "Algorithms" {
-		t.Errorf("got path title %q, want %q", path.Title, "Algorithms")
+	if topic.Title != "Algorithms" || topic.Content != "Core algorithms" {
+		t.Errorf("got topic %q / %q, want Algorithms / Core algorithms", topic.Title, topic.Content)
+	}
+	if topic.Status != models.StatusNotStarted {
+		t.Errorf("got topic status %q, want %q", topic.Status, models.StatusNotStarted)
 	}
 
-	var topics []models.Node
-	if err := db.Where("path_id = ?", path.ID).Order("id").Find(&topics).Error; err != nil {
-		t.Fatalf("load topics: %v", err)
+	var notes []models.Node
+	if err := db.Where("topic_id = ?", topic.ID).Order("id").Find(&notes).Error; err != nil {
+		t.Fatalf("load notes: %v", err)
 	}
-	if len(topics) != 2 {
-		t.Fatalf("got %d topics, want 2", len(topics))
-	}
-	for _, topic := range topics {
-		if topic.Type != models.NodeTypeTopic {
-			t.Errorf("got topic %q type %q, want %q", topic.Title, topic.Type, models.NodeTypeTopic)
-		}
-		if topic.Status == nil || *topic.Status != models.StatusNotStarted {
-			t.Errorf("got topic %q status %v, want %q", topic.Title, topic.Status, models.StatusNotStarted)
-		}
+	if len(notes) != 2 {
+		t.Fatalf("got %d notes, want 2", len(notes))
 	}
 
-	topicIDs := []uint{topics[0].ID, topics[1].ID}
+	noteIDs := []uint{notes[0].ID, notes[1].ID}
 	var links []models.NodeLink
-	if err := db.Where("from_node_id IN ? AND to_node_id IN ?", topicIDs, topicIDs).Find(&links).Error; err != nil {
+	if err := db.Where("from_node_id IN ? AND to_node_id IN ?", noteIDs, noteIDs).Find(&links).Error; err != nil {
 		t.Fatalf("load node links: %v", err)
 	}
 	if len(links) != 1 {
@@ -90,17 +85,27 @@ func TestPromoteToTopic(t *testing.T) {
 		t.Fatalf("create node: %v", err)
 	}
 
-	promoted, err := service.PromoteToTopic(context.Background(), node.ID)
+	topic, err := service.PromoteToTopic(context.Background(), node.ID)
 	if err != nil {
 		t.Fatalf("PromoteToTopic: %v", err)
 	}
-	if promoted.Type != models.NodeTypeTopic {
-		t.Errorf("got type %q, want %q", promoted.Type, models.NodeTypeTopic)
+	if topic.Title != "Plain note" || topic.Status != models.StatusNotStarted {
+		t.Errorf("got topic %q status %q, want Plain note / %q", topic.Title, topic.Status, models.StatusNotStarted)
 	}
-	if promoted.Status == nil || *promoted.Status != models.StatusNotStarted {
-		t.Errorf("got status %v, want %q", promoted.Status, models.StatusNotStarted)
+
+	var reloaded models.Node
+	if err := db.First(&reloaded, node.ID).Error; err != nil {
+		t.Fatalf("reload node: %v", err)
 	}
-	if promoted.PathID != nil {
-		t.Errorf("got PathID %v, want nil (promote does not assign a path)", promoted.PathID)
+	if reloaded.TopicID == nil || *reloaded.TopicID != topic.ID {
+		t.Errorf("got note TopicID %v, want %d", reloaded.TopicID, topic.ID)
+	}
+
+	again, err := service.PromoteToTopic(context.Background(), node.ID)
+	if err != nil {
+		t.Fatalf("PromoteToTopic (again): %v", err)
+	}
+	if again.ID != topic.ID {
+		t.Errorf("got topic %d on second promote, want the existing topic %d", again.ID, topic.ID)
 	}
 }

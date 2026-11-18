@@ -183,7 +183,15 @@ func (s *ChatService) pageContext(ctx context.Context, chat models.Chat) (string
 	if err := s.db.WithContext(ctx).First(&node, *chat.NodeID).Error; err != nil {
 		return "", fmt.Errorf("agent: load chat node %d: %w", *chat.NodeID, err)
 	}
-	return fmt.Sprintf("The user is chatting from the page of node_id %d, a %s titled %q. \"This note\" or \"this topic\" means this node — call read_note with node_id %d if you need its content.", node.ID, node.Type, node.Title, node.ID), nil
+	pageContext := fmt.Sprintf("The user is chatting from the page of node_id %d, a note titled %q. \"This note\" means this node — call read_note with node_id %d if you need its content.", node.ID, node.Title, node.ID)
+	if node.TopicID != nil {
+		var topic models.Topic
+		if err := s.db.WithContext(ctx).First(&topic, *node.TopicID).Error; err != nil {
+			return "", fmt.Errorf("agent: load chat topic %d: %w", *node.TopicID, err)
+		}
+		pageContext += fmt.Sprintf(" It belongs to topic_id %d titled %q — \"this topic\" means that topic.", topic.ID, topic.Title)
+	}
+	return pageContext, nil
 }
 
 func (s *ChatService) History(chatID uint) ([]models.ChatMessage, error) {

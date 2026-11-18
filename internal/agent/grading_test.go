@@ -25,12 +25,12 @@ func newGradingService(t *testing.T, db *gorm.DB, handler http.HandlerFunc) *Gra
 func seedPracticeItem(t *testing.T, db *gorm.DB, itemType string, answerKey *string, conceptNames ...string) models.PracticeItem {
 	t.Helper()
 
-	topic := models.Node{Title: "Topic", Content: "content", Type: models.NodeTypeTopic}
+	topic := models.Topic{Title: "Topic", Content: "content"}
 	if err := db.Create(&topic).Error; err != nil {
 		t.Fatalf("create topic: %v", err)
 	}
 
-	item := models.PracticeItem{NodeID: topic.ID, Prompt: "prompt", Type: itemType, AnswerKey: answerKey}
+	item := models.PracticeItem{TopicID: topic.ID, Prompt: "prompt", Type: itemType, AnswerKey: answerKey}
 	if err := db.Create(&item).Error; err != nil {
 		t.Fatalf("create practice item: %v", err)
 	}
@@ -181,29 +181,25 @@ func TestGradePassingNotFlaggedLogsNoMistake(t *testing.T) {
 	}
 }
 
-func topicStatus(t *testing.T, db *gorm.DB, nodeID uint) string {
+func topicStatus(t *testing.T, db *gorm.DB, topicID uint) string {
 	t.Helper()
-	var node models.Node
-	if err := db.First(&node, nodeID).Error; err != nil {
+	var topic models.Topic
+	if err := db.First(&topic, topicID).Error; err != nil {
 		t.Fatalf("load topic: %v", err)
 	}
-	if node.Status == nil {
-		return ""
-	}
-	return *node.Status
+	return topic.Status
 }
 
 func TestGradeMastersTopicOnceEveryItemPasses(t *testing.T) {
 	db := testDB(t)
 
-	notStarted := models.StatusNotStarted
-	topic := models.Node{Title: "Capitals", Content: "content", Type: models.NodeTypeTopic, Status: &notStarted}
+	topic := models.Topic{Title: "Capitals", Content: "content", Status: models.StatusNotStarted}
 	if err := db.Create(&topic).Error; err != nil {
 		t.Fatalf("create topic: %v", err)
 	}
 	keyA, keyB := "A", "C"
-	first := models.PracticeItem{NodeID: topic.ID, Prompt: "q1", Type: models.PracticeItemTypeMCQ, AnswerKey: &keyA}
-	second := models.PracticeItem{NodeID: topic.ID, Prompt: "q2", Type: models.PracticeItemTypeMCQ, AnswerKey: &keyB}
+	first := models.PracticeItem{TopicID: topic.ID, Prompt: "q1", Type: models.PracticeItemTypeMCQ, AnswerKey: &keyA}
+	second := models.PracticeItem{TopicID: topic.ID, Prompt: "q2", Type: models.PracticeItemTypeMCQ, AnswerKey: &keyB}
 	if err := db.Create(&first).Error; err != nil {
 		t.Fatalf("create item: %v", err)
 	}
@@ -264,7 +260,7 @@ func TestGradeFlaggedPassDoesNotMasterTopic(t *testing.T) {
 	if _, err := service.Grade(context.Background(), item.ID, "code"); err != nil {
 		t.Fatalf("Grade: %v", err)
 	}
-	if got := topicStatus(t, db, item.NodeID); got != models.StatusPracticing {
+	if got := topicStatus(t, db, item.TopicID); got != models.StatusPracticing {
 		t.Errorf("got status %q, want %q — a flagged pass should not count toward mastery", got, models.StatusPracticing)
 	}
 }

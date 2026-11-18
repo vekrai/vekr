@@ -150,7 +150,7 @@ func NewToolRegistry(webSearch *WebSearchTool, webFetch *WebFetchTool, knowledge
 		Type: "function",
 		Function: ai.ToolFunction{
 			Name:        "generate_curriculum_preview",
-			Description: "Generate a proposed learning path (a title plus a batch of topics with prerequisites) from a goal or pasted material. Nothing is saved yet — show the result to the user and ask them to confirm before calling commit_curriculum_preview.",
+			Description: "Generate a proposed topic (a title plus a batch of outline notes with prerequisites) from a goal or pasted material. Nothing is saved yet — show the result to the user and ask them to confirm before calling commit_curriculum_preview.",
 			Parameters: json.RawMessage(`{
 				"type": "object",
 				"properties": { "intake": { "type": "string", "description": "The learning goal, or material to build a curriculum from" } },
@@ -174,7 +174,7 @@ func NewToolRegistry(webSearch *WebSearchTool, webFetch *WebFetchTool, knowledge
 		Type: "function",
 		Function: ai.ToolFunction{
 			Name:        "commit_curriculum_preview",
-			Description: "Save the most recently generated curriculum preview as a real learning path with topics and prerequisite links. Only call this after the user has explicitly confirmed the preview looks right.",
+			Description: "Save the most recently generated curriculum preview as a real topic with its notes and prerequisite links. Only call this after the user has explicitly confirmed the preview looks right.",
 			Parameters:  json.RawMessage(`{"type": "object", "properties": {}}`),
 		},
 	}, func(ctx context.Context, args json.RawMessage) (string, error) {
@@ -185,32 +185,32 @@ func NewToolRegistry(webSearch *WebSearchTool, webFetch *WebFetchTool, knowledge
 		Type: "function",
 		Function: ai.ToolFunction{
 			Name:        "generate_practice_items",
-			Description: "Generate practice questions for a topic node, given its node_id. Items are saved immediately — cheap to regenerate, no confirmation needed.",
+			Description: "Generate practice questions for a topic, given its topic_id. Items are saved immediately — cheap to regenerate, no confirmation needed.",
 			Parameters: json.RawMessage(`{
 				"type": "object",
 				"properties": {
-					"node_id": { "type": "integer", "description": "The topic's node_id" },
+					"topic_id": { "type": "integer", "description": "The topic's topic_id" },
 					"count": { "type": "integer", "description": "How many items to generate (default 5 if omitted)" }
 				},
-				"required": ["node_id"]
+				"required": ["topic_id"]
 			}`),
 		},
 	}, func(ctx context.Context, args json.RawMessage) (string, error) {
 		var parsed struct {
-			NodeID uint `json:"node_id"`
-			Count  int  `json:"count"`
+			TopicID uint `json:"topic_id"`
+			Count   int  `json:"count"`
 		}
 		if err := json.Unmarshal(args, &parsed); err != nil {
 			return "", fmt.Errorf("invalid arguments: %w", err)
 		}
-		if parsed.NodeID == 0 {
-			return "", fmt.Errorf(`invalid arguments: "node_id" is required`)
+		if parsed.TopicID == 0 {
+			return "", fmt.Errorf(`invalid arguments: "topic_id" is required`)
 		}
 		count := parsed.Count
 		if count <= 0 {
 			count = 5
 		}
-		return practice.GenerateItems(ctx, parsed.NodeID, count)
+		return practice.GenerateItems(ctx, parsed.TopicID, count)
 	})
 
 	return r

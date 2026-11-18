@@ -98,7 +98,7 @@ func (s *GradingService) Grade(ctx context.Context, practiceItemID uint, submiss
 			}
 		}
 
-		return updateTopicStatus(tx, item.NodeID)
+		return updateTopicStatus(tx, item.TopicID)
 	})
 	if err != nil {
 		return models.Attempt{}, fmt.Errorf("agent: grade: %w", err)
@@ -122,12 +122,12 @@ func (s *GradingService) judge(ctx context.Context, item models.PracticeItem, su
 	return CallStructured[gradeResult](ctx, s.client, req)
 }
 
-func updateTopicStatus(tx *gorm.DB, nodeID uint) error {
-	var node models.Node
-	if err := tx.First(&node, nodeID).Error; err != nil {
-		return fmt.Errorf("load topic %d: %w", nodeID, err)
+func updateTopicStatus(tx *gorm.DB, topicID uint) error {
+	var topic models.Topic
+	if err := tx.First(&topic, topicID).Error; err != nil {
+		return fmt.Errorf("load topic %d: %w", topicID, err)
 	}
-	if node.Type != models.NodeTypeTopic || (node.Status != nil && *node.Status == models.StatusMastered) {
+	if topic.Status == models.StatusMastered {
 		return nil
 	}
 
@@ -150,18 +150,18 @@ func updateTopicStatus(tx *gorm.DB, nodeID uint) error {
 			 ORDER BY a.created_at DESC, a.id DESC
 			 LIMIT 1
 		) latest ON true
-		WHERE pi.node_id = ?
-	`, nodeID).Scan(&row).Error
+		WHERE pi.topic_id = ?
+	`, topicID).Scan(&row).Error
 	if err != nil {
-		return fmt.Errorf("load topic %d progress: %w", nodeID, err)
+		return fmt.Errorf("load topic %d progress: %w", topicID, err)
 	}
 
 	status := models.StatusPracticing
 	if row.Total > 0 && row.Passed == row.Total {
 		status = models.StatusMastered
 	}
-	if err := tx.Model(&models.Node{}).Where("id = ?", nodeID).Update("status", status).Error; err != nil {
-		return fmt.Errorf("update topic %d status: %w", nodeID, err)
+	if err := tx.Model(&models.Topic{}).Where("id = ?", topicID).Update("status", status).Error; err != nil {
+		return fmt.Errorf("update topic %d status: %w", topicID, err)
 	}
 	return nil
 }

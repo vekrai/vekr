@@ -6,17 +6,17 @@ import (
 	"vekr/internal/models"
 )
 
-templ NotesShow(node models.Node, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string, chatBusy bool) {
-	@layout(notesShowContent(node, contentHTML, chat, messages, messageHTML, chatBusy))
+templ NotesShow(node models.Node, topic *models.Topic, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string, chatBusy bool) {
+	@layout(notesShowContent(node, topic, contentHTML, chat, messages, messageHTML, chatBusy))
 }
 
-templ notesShowContent(node models.Node, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string, chatBusy bool) {
+templ notesShowContent(node models.Node, topic *models.Topic, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string, chatBusy bool) {
 	<div class="grid md:grid-cols-[1.6fr_1fr] gap-4">
 		<div class="bg-surface border border-black/10 rounded-xl p-5">
 			<div class="flex justify-between items-center mb-3.5">
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary">{ node.Title }</h2>
-				if node.Type == models.NodeTypeTopic {
-					<a class="text-xs text-ink-secondary hover:underline" href={ templ.URL(fmt.Sprintf("/topics/%d/practice", node.ID)) }>{ t(ctx, "note.practice") }</a>
+				if topic != nil {
+					<a class="text-xs text-ink-secondary hover:underline" href={ templ.URL(fmt.Sprintf("/topics/%d", topic.ID)) }>{ tData(ctx, "note.topic", map[string]any{"Title": topic.Title}) }</a>
 				} else {
 					<form method="POST" action={ templ.URL(fmt.Sprintf("/notes/%d/promote", node.ID)) }>
 						<button class="text-xs text-ink-secondary hover:underline" type="submit">{ t(ctx, "note.promote") }</button>

@@ -7,17 +7,17 @@ import (
 	"vekr/internal/models"
 )
 
-func TestInterleaveByNodeAlternatesTopics(t *testing.T) {
+func TestInterleaveByTopicAlternatesTopics(t *testing.T) {
 	items := []models.PracticeItem{
-		{ID: 1, NodeID: 10},
-		{ID: 2, NodeID: 10},
-		{ID: 3, NodeID: 10},
-		{ID: 4, NodeID: 20},
-		{ID: 5, NodeID: 30},
-		{ID: 6, NodeID: 30},
+		{ID: 1, TopicID: 10},
+		{ID: 2, TopicID: 10},
+		{ID: 3, TopicID: 10},
+		{ID: 4, TopicID: 20},
+		{ID: 5, TopicID: 30},
+		{ID: 6, TopicID: 30},
 	}
 
-	got := interleaveByNode(items)
+	got := interleaveByTopic(items)
 
 	want := []uint{1, 4, 5, 2, 6, 3}
 	if len(got) != len(want) {

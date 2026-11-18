@@ -33,7 +33,7 @@ func TestCurriculumToolsGenerateThenCommit(t *testing.T) {
 		fmt.Fprint(w, `{
 			"id": "resp-1",
 			"choices": [{
-				"message": {"role": "assistant", "content": "{\"path_title\":\"Binary search\",\"topics\":[{\"title\":\"Sorted arrays\",\"content\":\"basics\",\"prerequisites\":[]}]}"},
+				"message": {"role": "assistant", "content": "{\"topic_title\":\"Binary search\",\"notes\":[{\"title\":\"Sorted arrays\",\"content\":\"basics\",\"prerequisites\":[]}]}"},
 				"finish_reason": "stop"
 			}]
 		}`)
@@ -44,7 +44,7 @@ func TestCurriculumToolsGenerateThenCommit(t *testing.T) {
 		t.Fatalf("GeneratePreview: %v", err)
 	}
 	if !strings.Contains(summary, "Binary search") || !strings.Contains(summary, "Sorted arrays") {
-		t.Errorf("got summary %q, want it to mention the path and topic", summary)
+		t.Errorf("got summary %q, want it to mention the topic and note", summary)
 	}
 	if !strings.Contains(summary, "confirm") {
 		t.Errorf("got summary %q, want it to tell the model to wait for confirmation", summary)
@@ -55,12 +55,12 @@ func TestCurriculumToolsGenerateThenCommit(t *testing.T) {
 		t.Fatalf("CommitPreview: %v", err)
 	}
 	if !strings.Contains(result, "Binary search") {
-		t.Errorf("got commit result %q, want it to mention the path title", result)
+		t.Errorf("got commit result %q, want it to mention the topic title", result)
 	}
 
-	var path models.Path
-	if err := db.Where("title = ?", "Binary search").First(&path).Error; err != nil {
-		t.Fatalf("expected the path to be persisted: %v", err)
+	var topic models.Topic
+	if err := db.Where("title = ?", "Binary search").First(&topic).Error; err != nil {
+		t.Fatalf("expected the topic to be persisted: %v", err)
 	}
 
 	if _, err := tools.CommitPreview(ctx); err == nil {
