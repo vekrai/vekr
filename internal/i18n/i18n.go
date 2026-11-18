@@ -7,15 +7,12 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/alexedwards/scs/v2"
 	goi18n "github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 	"gopkg.in/yaml.v3"
 
 	"vekr/locales"
 )
-
-const SessionKey = "locale"
 
 var DefaultLanguage = language.English
 
@@ -74,10 +71,10 @@ func WithLanguage(ctx context.Context, lang language.Tag) context.Context {
 	return context.WithValue(ctx, contextKey{}, state{lang: lang, localizer: goi18n.NewLocalizer(bundle, lang.String())})
 }
 
-func Middleware(sessions *scs.SessionManager) func(http.Handler) http.Handler {
+func Middleware(locale func(*http.Request) string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			lang := Resolve(sessions.GetString(r.Context(), SessionKey), r.Header.Get("Accept-Language"))
+			lang := Resolve(locale(r), r.Header.Get("Accept-Language"))
 			next.ServeHTTP(w, r.WithContext(WithLanguage(r.Context(), lang)))
 		})
 	}

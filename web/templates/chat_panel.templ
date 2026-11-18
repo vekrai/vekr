@@ -43,7 +43,7 @@ templ chatMessages(messages []models.ChatMessage, messageHTML []string, busy boo
 		}
 	}
 	if busy {
-		<div class="text-sm self-start max-w-[85%] bg-page border border-black/10 rounded-lg px-3 py-1.5 text-ink-muted">{ t(ctx, "chat.thinking") }</div>
+		<div class="text-sm self-start max-w-[85%] bg-page border border-black/10 rounded-lg px-3 py-1.5 text-ink-muted">{ t(ctx, "chat.thinking") }<span class="thinking-dots" aria-hidden="true"></span></div>
 	}
 }
 

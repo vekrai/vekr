@@ -15,6 +15,7 @@ func NewRouter(app *App) http.Handler {
 	topics := handlers.NewTopicsHandler(app.DB)
 	practice := handlers.NewPracticeHandler(app.DB, app.Grading)
 	streams := handlers.NewStreamsHandler(app.Hub, app.Chat)
+	locale := handlers.NewLocaleHandler(app.DB)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", dashboard.Index)
@@ -29,7 +30,8 @@ func NewRouter(app *App) http.Handler {
 	mux.HandleFunc("GET /topics/{id}/practice", practice.Index)
 	mux.HandleFunc("GET /drill", practice.Drill)
 	mux.HandleFunc("POST /practice_items/{id}/attempts", practice.Submit)
+	mux.HandleFunc("POST /locale", locale.Toggle)
 	mux.Handle("GET /static/", assets.Handler())
 
-	return Chain(mux, Recovery, Logging, app.Sessions.LoadAndSave, i18n.Middleware(app.Sessions), handlers.ChatState(app.Chat))
+	return Chain(mux, Recovery, Logging, app.Sessions.LoadAndSave, i18n.Middleware(handlers.SettingLocale(app.DB)), handlers.ChatState(app.Chat))
 }

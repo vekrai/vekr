@@ -39,10 +39,23 @@ templ layoutFor(nodeID uint, content templ.Component) {
 				<div class="ml-auto w-full max-w-sm">
 					@chatLauncher(nodeID)
 				</div>
+				@localeToggle(chat.PagePath)
 			</div>
 			@content
 			@chatModal(chat, nodeID)
 		</div>
 	</body>
 	</html>
+}
+
+templ localeToggle(returnTo string) {
+	{{ zh := i18n.Lang(ctx) == "zh" }}
+	<form method="post" action="/locale" class="shrink-0">
+		<input type="hidden" name="return_to" value={ returnTo }/>
+		<button type="submit" class="h-9 px-3 rounded-lg border border-black/10 bg-surface text-sm text-ink-muted hover:border-black/20 flex items-center gap-1" title={ t(ctx, "locale.toggle") } aria-label={ t(ctx, "locale.toggle") }>
+			<span class={ templ.KV("font-bold text-ink", !zh) }>A</span>
+			<span>/</span>
+			<span class={ templ.KV("font-bold text-ink", zh) }>文</span>
+		</button>
+	</form>
 }

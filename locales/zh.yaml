@@ -1,0 +1,76 @@
+app.title: "Vekr"
+
+dashboard.queue.title: "今日队列"
+dashboard.queue.empty: "队列为空 — 让 V 创建一个主题，或把笔记转为主题。"
+dashboard.queue.start: "开始今日学习"
+queue.kind.learn: "学习"
+queue.kind.practice: "练习"
+
+dashboard.topics.title: "主题"
+dashboard.topics.empty: "还没有主题 — 在聊天中让 V 创建一个。"
+
+dashboard.mastered.title: "已掌握"
+dashboard.mastered.empty: "还没有已掌握的主题。"
+
+dashboard.recent.title: "最近笔记"
+
+dashboard.weak.title: "薄弱点"
+dashboard.weak.empty: "暂无薄弱点记录。"
+dashboard.weak.missed:
+  other: "{{.PluralCount}} 次尝试中错了 {{.Misses}} 次"
+dashboard.weak.drill: "专项练习"
+dashboard.weak.together: "一起练习这些"
+
+dashboard.stats.title: "统计"
+dashboard.stats.streak: "连续天数"
+dashboard.stats.nodes: "笔记数"
+dashboard.stats.mastered: "已掌握"
+
+chat.title: "与 V 聊天"
+chat.save_as_note: "保存为笔记"
+chat.thinking: "V 正在思考"
+chat.placeholder: "问 V 任何问题…"
+chat.placeholder_note: "问 V 关于这篇笔记的问题…"
+chat.send: "发送"
+chat.minimize: "最小化"
+chat.recent: "最近聊天"
+chat.untitled: "未命名聊天"
+chat.on_note: "关于 {{.Title}}"
+
+notes.title: "笔记"
+notes.count:
+  other: "{{.PluralCount}} 条"
+notes.empty: "还没有笔记。"
+notes.new: "新建笔记"
+notes.field.title: "标题"
+notes.field.content: "内容"
+notes.create: "创建"
+
+note.topic: "主题：{{.Title}}"
+note.promote: "转为主题"
+note.back: "返回笔记"
+
+practice.title: "练习：{{.Title}}"
+practice.empty: "还没有练习题 — 在聊天中让 V 就这个主题出题。"
+practice.back: "返回主题"
+practice.passed: "已通过"
+practice.not_yet: "未通过"
+practice.submit: "提交"
+practice.placeholder.mcq: "输入选项字母作答…"
+practice.placeholder.default: "你的答案…"
+
+topic.notes: "笔记"
+topic.notes_empty: "这个主题还没有笔记。"
+topic.practice: "练习"
+topic.progress: "已通过 {{.Passed}} / {{.Total}} 道练习题"
+topic.back: "返回仪表盘"
+topic.status.not_started: "未开始"
+topic.status.learning: "学习中"
+topic.status.practicing: "练习中"
+topic.status.mastered: "已掌握"
+
+drill.title: "专项练习：{{.Concepts}}"
+drill.empty: "还没有考查这些概念的练习题。"
+drill.back: "返回仪表盘"
+
+locale.toggle: "切换语言"
