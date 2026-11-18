@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
   static targets = ["modal", "messages", "input"];
-  static values = { url: String };
+  static values = { chatId: Number };
 
   connect() {
     this.visiting = false;
@@ -29,25 +29,23 @@ export default class extends Controller {
   open(event) {
     event?.target?.blur?.();
     this.modalTarget.hidden = false;
-    history.replaceState(history.state, "", this.urlValue);
     this.sync();
     if (this.hasInputTarget && !this.inputTarget.disabled) this.inputTarget.focus();
   }
 
   openNew(event) {
-    if (this.urlValue === "/") {
+    if (!this.chatIdValue) {
       this.open(event);
       return;
     }
     if (this.visiting) return;
     this.visiting = true;
     event?.target?.blur?.();
-    window.Turbo.visit("/?chat=new", { action: "replace" });
+    window.Turbo.visit(this.urlWith({ chat: "new" }), { action: "replace" });
   }
 
   minimize() {
     this.modalTarget.hidden = true;
-    history.replaceState(history.state, "", "/");
     this.sync();
   }
 
@@ -57,11 +55,20 @@ export default class extends Controller {
 
   sync() {
     document.body.classList.toggle("overflow-hidden", this.isOpen);
+    const wanted = this.isOpen && this.chatIdValue ? this.urlWith({ chat_id: this.chatIdValue }) : this.urlWith({});
+    if (wanted !== location.pathname + location.search) history.replaceState(history.state, "", wanted);
     if (this.isOpen) {
-      if (location.pathname + location.search !== this.urlValue) history.replaceState(history.state, "", this.urlValue);
       this.scrollToBottom();
       if (this.hasInputTarget && !this.inputTarget.disabled && document.activeElement === document.body) this.inputTarget.focus();
     }
+  }
+
+  urlWith(params) {
+    const url = new URL(location.href);
+    url.searchParams.delete("chat_id");
+    url.searchParams.delete("chat");
+    for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+    return url.pathname + url.search;
   }
 
   scrollToBottom() {

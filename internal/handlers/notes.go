@@ -16,11 +16,10 @@ import (
 type NotesHandler struct {
 	db         *gorm.DB
 	curriculum *agent.CurriculumService
-	chat       *agent.ChatService
 }
 
-func NewNotesHandler(db *gorm.DB, curriculum *agent.CurriculumService, chat *agent.ChatService) *NotesHandler {
-	return &NotesHandler{db: db, curriculum: curriculum, chat: chat}
+func NewNotesHandler(db *gorm.DB, curriculum *agent.CurriculumService) *NotesHandler {
+	return &NotesHandler{db: db, curriculum: curriculum}
 }
 
 func (h *NotesHandler) Index(w http.ResponseWriter, r *http.Request) {
@@ -45,31 +44,6 @@ func (h *NotesHandler) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var chat models.Chat
-	var messages []models.ChatMessage
-	if rawChatID := r.URL.Query().Get("chat_id"); rawChatID != "" {
-		chatID, err := strconv.ParseUint(rawChatID, 10, 64)
-		if err != nil {
-			http.Error(w, "invalid chat_id", http.StatusBadRequest)
-			return
-		}
-		found, err := h.chat.FindChat(uint(chatID))
-		if err == nil && found.NodeID != nil && *found.NodeID == node.ID {
-			chat = found
-			messages, err = h.chat.History(chat.ID)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		}
-	}
-
-	messageHTML, err := renderMessages(messages)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	var topic *models.Topic
 	if node.TopicID != nil {
 		var found models.Topic
@@ -78,7 +52,7 @@ func (h *NotesHandler) Show(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	templates.NotesShow(node, topic, contentHTML, chat, messages, messageHTML, chat.ID != 0 && h.chat.Busy(chat.ID)).Render(r.Context(), w)
+	templates.NotesShow(node, topic, contentHTML).Render(r.Context(), w)
 }
 
 func (h *NotesHandler) Create(w http.ResponseWriter, r *http.Request) {

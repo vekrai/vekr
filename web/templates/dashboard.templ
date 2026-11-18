@@ -16,12 +16,7 @@ type DashboardView struct {
 	TopicProgress []models.TopicProgress
 	Queue         []models.QueueItem
 	WeakSpots     []models.WeakSpot
-	Chat          models.Chat
-	ChatOpen      bool
 	RecentChats   []models.ChatSummary
-	Messages      []models.ChatMessage
-	MessageHTML   []string
-	ChatBusy      bool
 }
 
 func progressPercent(p models.TopicProgress) float64 {
@@ -40,6 +35,13 @@ func queueItemURL(q models.QueueItem) string {
 		return fmt.Sprintf("/topics/%d/practice", q.TopicID)
 	}
 	return fmt.Sprintf("/topics/%d", q.TopicID)
+}
+
+func recentChatURL(c models.ChatSummary) string {
+	if c.NodeID != nil {
+		return fmt.Sprintf("/notes/%d?chat_id=%d", *c.NodeID, c.ChatID)
+	}
+	return fmt.Sprintf("/?chat_id=%d", c.ChatID)
 }
 
 func drillURL(spots ...models.WeakSpot) string {
@@ -120,7 +122,28 @@ templ dashboardContent(view DashboardView) {
 
 		<div class="flex flex-col gap-4 min-w-0">
 
-			@dashboardChat(view.Chat, view.ChatOpen, view.RecentChats, view.Messages, view.MessageHTML, view.ChatBusy)
+			if len(view.RecentChats) > 0 {
+				<div class="bg-surface border border-black/10 rounded-xl p-5">
+					<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ t(ctx, "chat.recent") }</h2>
+					for _, c := range view.RecentChats {
+						<a class="flex items-baseline gap-3 text-[13px] py-2 border-b border-gridline last:border-b-0 group" href={ templ.URL(recentChatURL(c)) }>
+							<span class="flex-1 min-w-0">
+								<span class="block truncate text-ink-secondary group-hover:underline">
+									if c.Title != "" {
+										{ c.Title }
+									} else {
+										{ t(ctx, "chat.untitled") }
+									}
+								</span>
+								if c.NodeTitle != nil {
+									<span class="block truncate text-[11px] text-ink-muted mt-0.5">{ tData(ctx, "chat.on_note", map[string]any{"Title": *c.NodeTitle}) }</span>
+								}
+							</span>
+							<span class="shrink-0 text-[11px] text-ink-muted">{ c.LastAt.Format("Jan 2") }</span>
+						</a>
+					}
+				</div>
+			}
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ t(ctx, "dashboard.recent.title") }</h2>

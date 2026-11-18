@@ -145,11 +145,13 @@ func (s *ChatService) RecentChats(limit int) ([]models.ChatSummary, error) {
 	err := s.db.Raw(`
 		SELECT c.id AS chat_id,
 		       (SELECT m.content FROM chat_messages m WHERE m.chat_id = c.id AND m.role = 'user' ORDER BY m.id LIMIT 1) AS title,
-		       MAX(cm.created_at) AS last_at
+		       MAX(cm.created_at) AS last_at,
+		       c.node_id,
+		       n.title AS node_title
 		FROM chats c
 		JOIN chat_messages cm ON cm.chat_id = c.id
-		WHERE c.node_id IS NULL
-		GROUP BY c.id
+		LEFT JOIN nodes n ON n.id = c.node_id
+		GROUP BY c.id, n.title
 		ORDER BY last_at DESC
 		LIMIT ?
 	`, limit).Scan(&chats).Error

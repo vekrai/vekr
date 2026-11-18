@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -54,5 +56,35 @@ func TestWriteEventPrefixesEveryLine(t *testing.T) {
 	want := "data: <turbo-stream>\ndata: <template>hi</template>\ndata: </turbo-stream>\n\n"
 	if sb.String() != want {
 		t.Errorf("got %q, want %q", sb.String(), want)
+	}
+}
+
+func TestPagePathDropsChatParams(t *testing.T) {
+	cases := map[string]string{
+		"/":                             "/",
+		"/?chat_id=4":                   "/",
+		"/notes/7?chat=new":             "/notes/7",
+		"/drill?concept_id=1&chat_id=9": "/drill?concept_id=1",
+		"/drill?chat_id=9&concept_id=1&concept_id=2": "/drill?concept_id=1&concept_id=2",
+	}
+	for raw, want := range cases {
+		r := httptest.NewRequest(http.MethodGet, raw, nil)
+		if got := pagePath(r); got != want {
+			t.Errorf("pagePath(%q) = %q, want %q", raw, got, want)
+		}
+	}
+}
+
+func TestWithChatID(t *testing.T) {
+	cases := map[string]string{
+		"/":                   "/?chat_id=5",
+		"/notes/7":            "/notes/7?chat_id=5",
+		"/drill?concept_id=1": "/drill?chat_id=5&concept_id=1",
+		"/topics/3?chat_id=2": "/topics/3?chat_id=5",
+	}
+	for path, want := range cases {
+		if got := withChatID(path, 5); got != want {
+			t.Errorf("withChatID(%q) = %q, want %q", path, got, want)
+		}
 	}
 }

@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"vekr/internal/agent"
@@ -36,7 +37,7 @@ func (h *ChatHandler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 	} else if r.FormValue("node_id") == "" || r.FormValue("node_id") == "0" {
 		if content == "" {
-			http.Redirect(w, r, "/", http.StatusSeeOther)
+			http.Redirect(w, r, returnTo(r, "/"), http.StatusSeeOther)
 			return
 		}
 		var err error
@@ -52,7 +53,7 @@ func (h *ChatHandler) Create(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if content == "" {
-			http.Redirect(w, r, fmt.Sprintf("/notes/%d", nodeID), http.StatusSeeOther)
+			http.Redirect(w, r, returnTo(r, fmt.Sprintf("/notes/%d", nodeID)), http.StatusSeeOther)
 			return
 		}
 		chat, err = h.chat.StartNodeChat(uint(nodeID))
@@ -69,16 +70,25 @@ func (h *ChatHandler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Redirect(w, r, chatReturnURL(chat), http.StatusSeeOther)
+	http.Redirect(w, r, withChatID(returnTo(r, chatReturnURL(chat)), chat.ID), http.StatusSeeOther)
 }
 
-func (h *ChatHandler) New(w http.ResponseWriter, r *http.Request) {
-	chat, err := h.chat.StartChat()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+func returnTo(r *http.Request, fallback string) string {
+	if path := r.FormValue("return_to"); isLocalPath(path) {
+		return path
 	}
-	http.Redirect(w, r, chatReturnURL(chat), http.StatusSeeOther)
+	return fallback
+}
+
+func withChatID(path string, chatID uint) string {
+	u, err := url.Parse(path)
+	if err != nil {
+		return path
+	}
+	query := u.Query()
+	query.Set("chat_id", strconv.FormatUint(uint64(chatID), 10))
+	u.RawQuery = query.Encode()
+	return u.String()
 }
 
 func (h *ChatHandler) Distill(w http.ResponseWriter, r *http.Request) {

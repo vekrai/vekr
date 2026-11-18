@@ -1,8 +1,24 @@
 package templates
 
-import "vekr/internal/i18n"
+import (
+	"fmt"
+
+	"vekr/internal/assets"
+	"vekr/internal/i18n"
+)
+
+func importMap() string {
+	return `<script type="importmap" data-turbo-track="reload">` + assets.ImportMap(map[string]string{
+		"@hotwired/turbo":    "js/turbo.min.js",
+		"@hotwired/stimulus": "js/stimulus.min.js",
+	}, "js/controllers") + `</script>`
+}
 
 templ layout(content templ.Component) {
+	@layoutFor(0, content)
+}
+
+templ layoutFor(nodeID uint, content templ.Component) {
 	<!DOCTYPE html>
 	<html lang={ i18n.Lang(ctx) }>
 	<head>
@@ -11,24 +27,21 @@ templ layout(content templ.Component) {
 		<title>{ t(ctx, "app.title") }</title>
 		<meta name="turbo-refresh-method" content="morph"/>
 		<meta name="turbo-refresh-scroll" content="preserve"/>
-		<link rel="stylesheet" href="/static/css/app.css"/>
-		<script type="importmap">
-			{
-				"imports": {
-					"@hotwired/turbo": "/static/js/turbo.min.js",
-					"@hotwired/stimulus": "/static/js/stimulus.min.js",
-					"controllers/": "/static/js/controllers/"
-				}
-			}
-		</script>
-		<script type="module" src="/static/js/application.js"></script>
+		<link rel="stylesheet" href={ assets.Path("css/app.css") } data-turbo-track="reload"/>
+		@templ.Raw(importMap())
+		<script type="module" src={ assets.Path("js/application.js") } data-turbo-track="reload"></script>
 	</head>
 	<body class="m-0 bg-page text-ink font-sans">
-		<div class="max-w-[1180px] mx-auto px-6 pt-5 pb-14">
+		{{ chat := chatState(ctx) }}
+		<div class="max-w-[1180px] mx-auto px-6 pt-5 pb-14" data-controller="chat-modal" data-chat-modal-chat-id-value={ fmt.Sprintf("%d", chat.Chat.ID) } data-action="turbo:morph@document->chat-modal#sync">
 			<div class="flex items-center gap-4 mb-5">
 				<a href="/" class="w-9 h-9 rounded-[10px] bg-ink text-surface flex items-center justify-center font-bold text-[17px] shrink-0">V</a>
+				<div class="ml-auto w-full max-w-sm">
+					@chatLauncher(nodeID)
+				</div>
 			</div>
 			@content
+			@chatModal(chat, nodeID)
 		</div>
 	</body>
 	</html>

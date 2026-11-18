@@ -15,7 +15,7 @@ import (
 	"vekr/internal/models"
 )
 
-func NotesShow(node models.Node, topic *models.Topic, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string, chatBusy bool) templ.Component {
+func NotesShow(node models.Node, topic *models.Topic, contentHTML string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -32,7 +32,7 @@ func NotesShow(node models.Node, topic *models.Topic, contentHTML string, chat m
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = layout(notesShowContent(node, topic, contentHTML, chat, messages, messageHTML, chatBusy)).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = layoutFor(node.ID, notesShowContent(node, topic, contentHTML)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -40,7 +40,7 @@ func NotesShow(node models.Node, topic *models.Topic, contentHTML string, chat m
 	})
 }
 
-func notesShowContent(node models.Node, topic *models.Topic, contentHTML string, chat models.Chat, messages []models.ChatMessage, messageHTML []string, chatBusy bool) templ.Component {
+func notesShowContent(node models.Node, topic *models.Topic, contentHTML string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -57,14 +57,14 @@ func notesShowContent(node models.Node, topic *models.Topic, contentHTML string,
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"grid md:grid-cols-[1.6fr_1fr] gap-4\"><div class=\"bg-surface border border-black/10 rounded-xl p-5\"><div class=\"flex justify-between items-center mb-3.5\"><h2 class=\"text-[13px] font-semibold uppercase tracking-wide text-ink-secondary\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"bg-surface border border-black/10 rounded-xl p-5\"><div class=\"flex justify-between items-start gap-4 mb-3.5\"><h2 class=\"text-[13px] font-semibold uppercase tracking-wide text-ink-secondary\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(node.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 17, Col: 97}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 16, Col: 96}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -75,14 +75,14 @@ func notesShowContent(node models.Node, topic *models.Topic, contentHTML string,
 			return templ_7745c5c3_Err
 		}
 		if topic != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<a class=\"text-xs text-ink-secondary hover:underline\" href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<a class=\"shrink-0 text-xs text-ink-secondary hover:underline\" href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.URL(fmt.Sprintf("/topics/%d", topic.ID))).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 19, Col: 112}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 18, Col: 120}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 			if templ_7745c5c3_Err != nil {
@@ -95,7 +95,7 @@ func notesShowContent(node models.Node, topic *models.Topic, contentHTML string,
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(tData(ctx, "note.topic", map[string]any{"Title": topic.Title}))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 19, Col: 179}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 18, Col: 187}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -106,14 +106,14 @@ func notesShowContent(node models.Node, topic *models.Topic, contentHTML string,
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<form method=\"POST\" action=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<form class=\"shrink-0\" method=\"POST\" action=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.URL(fmt.Sprintf("/notes/%d/promote", node.ID))).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 21, Col: 86}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 20, Col: 102}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
@@ -126,7 +126,7 @@ func notesShowContent(node models.Node, topic *models.Topic, contentHTML string,
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(t(ctx, "note.promote"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 22, Col: 103}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 21, Col: 102}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -137,7 +137,7 @@ func notesShowContent(node models.Node, topic *models.Topic, contentHTML string,
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div><div class=\"text-sm\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div><div class=\"markdown text-sm\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -145,14 +145,14 @@ func notesShowContent(node models.Node, topic *models.Topic, contentHTML string,
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div><p class=\"text-xs text-ink-muted mt-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div><p class=\"text-xs text-ink-muted mt-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(node.CreatedAt.Format("Jan 2, 2006 15:04"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 29, Col: 86}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 28, Col: 85}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -165,21 +165,13 @@ func notesShowContent(node models.Node, topic *models.Topic, contentHTML string,
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(t(ctx, "note.back"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 30, Col: 103}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/notes_show.templ`, Line: 29, Col: 102}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</a></div><div>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = chatPanel(chat, node.ID, messages, messageHTML, chatBusy).Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</a></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

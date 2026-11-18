@@ -114,7 +114,7 @@ func topicsShowContent(progress models.TopicProgress, contentHTML string, notes 
 			return templ_7745c5c3_Err
 		}
 		if progress.Topic.Content != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"text-sm mb-3.5\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"markdown text-sm mb-3.5\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -18,7 +18,21 @@ description = "Re-fetch vendored browser JS from the versions pinned in package.
 run = "./scripts/vendor-js.sh"
 
 [tasks.dev]
-description = "Run the server"
+description = "Run the server with live reload on http://localhost:8000"
+depends = ["templates:generate", "css:build"]
+run = """
+proxy_port=${PORT:-8000}
+export PORT=${APP_PORT:-8001}
+tailwindcss -i web/static/css/input.css -o web/static/css/app.css --watch=always &
+trap 'kill $! 2>/dev/null' EXIT INT TERM
+templ generate --watch \
+  --watch-pattern '(.+\\.go$)|(.+\\.templ$)|(.+\\.yaml$)|(.+\\.txt$)|(.+\\.css$)|(.+\\.js$)' \
+  --proxy "http://localhost:$PORT" --proxyport "$proxy_port" --open-browser=false \
+  --cmd 'go run ./cmd/server'
+"""
+
+[tasks.serve]
+description = "Run the server once, without watching"
 depends = ["templates:generate", "css:build"]
 run = "go run ./cmd/server"
 

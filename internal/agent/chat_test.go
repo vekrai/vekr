@@ -326,3 +326,49 @@ func TestSendMessageInBackgroundRepliesThenPublishesRefresh(t *testing.T) {
 		t.Errorf("got history %+v, want the user message then the reply (and no second message)", history)
 	}
 }
+
+func TestRecentChatsIncludesNoteChats(t *testing.T) {
+	db := testDB(t)
+	service := newChatService(t, db, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("model should not be called")
+	})
+
+	node := models.Node{Title: "Loop invariants"}
+	if err := db.Create(&node).Error; err != nil {
+		t.Fatalf("create node: %v", err)
+	}
+	general, err := service.StartChat()
+	if err != nil {
+		t.Fatalf("StartChat: %v", err)
+	}
+	noteChat, err := service.StartNodeChat(node.ID)
+	if err != nil {
+		t.Fatalf("StartNodeChat: %v", err)
+	}
+	if _, err := service.AddUserMessage(general.ID, "general question"); err != nil {
+		t.Fatalf("AddUserMessage: %v", err)
+	}
+	if _, err := service.AddUserMessage(noteChat.ID, "about this note"); err != nil {
+		t.Fatalf("AddUserMessage: %v", err)
+	}
+
+	recent, err := service.RecentChats(50)
+	if err != nil {
+		t.Fatalf("RecentChats: %v", err)
+	}
+	byID := make(map[uint]models.ChatSummary)
+	for _, c := range recent {
+		byID[c.ChatID] = c
+	}
+
+	got, ok := byID[noteChat.ID]
+	if !ok {
+		t.Fatal("note chat missing from recent chats")
+	}
+	if got.NodeID == nil || *got.NodeID != node.ID || got.NodeTitle == nil || *got.NodeTitle != "Loop invariants" {
+		t.Errorf("got note chat summary %+v, want node %d titled Loop invariants", got, node.ID)
+	}
+	if g, ok := byID[general.ID]; !ok || g.NodeID != nil || g.NodeTitle != nil {
+		t.Errorf("got general chat summary %+v (present=%v), want present with no node", g, ok)
+	}
+}

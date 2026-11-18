@@ -9,9 +9,11 @@ type Chat struct {
 }
 
 type ChatSummary struct {
-	ChatID uint
-	Title  string
-	LastAt time.Time
+	ChatID    uint
+	Title     string
+	LastAt    time.Time
+	NodeID    *uint
+	NodeTitle *string
 }
 
 type ChatMessage struct {
