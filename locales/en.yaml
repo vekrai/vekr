@@ -32,6 +32,10 @@ chat.save_as_note: "Save as note"
 chat.thinking: "V is thinking…"
 chat.placeholder: "Talk, paste material, or drop a file…"
 chat.send: "Send"
+chat.new: "New chat"
+chat.minimize: "Minimize"
+chat.recent: "Recent chats"
+chat.untitled: "Untitled chat"
 
 notes.title: "Notes"
 notes.count:

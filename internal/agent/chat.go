@@ -120,6 +120,45 @@ func (s *ChatService) CurrentChat() (models.Chat, error) {
 	return chat, nil
 }
 
+func (s *ChatService) StartChat() (models.Chat, error) {
+	current, err := s.CurrentChat()
+	if err != nil {
+		return models.Chat{}, err
+	}
+	var count int64
+	if err := s.db.Model(&models.ChatMessage{}).Where("chat_id = ?", current.ID).Count(&count).Error; err != nil {
+		return models.Chat{}, fmt.Errorf("agent: count chat messages: %w", err)
+	}
+	if count == 0 {
+		return current, nil
+	}
+
+	chat := models.Chat{}
+	if err := s.db.Create(&chat).Error; err != nil {
+		return models.Chat{}, fmt.Errorf("agent: create chat: %w", err)
+	}
+	return chat, nil
+}
+
+func (s *ChatService) RecentChats(limit int) ([]models.ChatSummary, error) {
+	var chats []models.ChatSummary
+	err := s.db.Raw(`
+		SELECT c.id AS chat_id,
+		       (SELECT m.content FROM chat_messages m WHERE m.chat_id = c.id AND m.role = 'user' ORDER BY m.id LIMIT 1) AS title,
+		       MAX(cm.created_at) AS last_at
+		FROM chats c
+		JOIN chat_messages cm ON cm.chat_id = c.id
+		WHERE c.node_id IS NULL
+		GROUP BY c.id
+		ORDER BY last_at DESC
+		LIMIT ?
+	`, limit).Scan(&chats).Error
+	if err != nil {
+		return nil, fmt.Errorf("agent: load recent chats: %w", err)
+	}
+	return chats, nil
+}
+
 func (s *ChatService) FindChat(chatID uint) (models.Chat, error) {
 	var chat models.Chat
 	if err := s.db.First(&chat, chatID).Error; err != nil {

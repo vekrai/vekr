@@ -61,6 +61,15 @@ func (h *ChatHandler) Create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, chatReturnURL(chat), http.StatusSeeOther)
 }
 
+func (h *ChatHandler) New(w http.ResponseWriter, r *http.Request) {
+	chat, err := h.chat.StartChat()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, chatReturnURL(chat), http.StatusSeeOther)
+}
+
 func (h *ChatHandler) Distill(w http.ResponseWriter, r *http.Request) {
 	chatID, err := strconv.ParseUint(r.PathValue("id"), 10, 64)
 	if err != nil {
@@ -79,7 +88,7 @@ func (h *ChatHandler) Distill(w http.ResponseWriter, r *http.Request) {
 
 func chatReturnURL(chat models.Chat) string {
 	if chat.NodeID == nil {
-		return "/"
+		return fmt.Sprintf("/?chat_id=%d", chat.ID)
 	}
 	return fmt.Sprintf("/notes/%d?chat_id=%d", *chat.NodeID, chat.ID)
 }

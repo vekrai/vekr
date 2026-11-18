@@ -8,6 +8,12 @@ type Chat struct {
 	CreatedAt time.Time
 }
 
+type ChatSummary struct {
+	ChatID uint
+	Title  string
+	LastAt time.Time
+}
+
 type ChatMessage struct {
 	ID         uint `gorm:"primaryKey"`
 	ChatID     uint

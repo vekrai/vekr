@@ -21,6 +21,7 @@ func NewRouter(app *App) http.Handler {
 	mux.HandleFunc("GET /notes/{id}", notes.Show)
 	mux.HandleFunc("POST /notes/{id}/promote", notes.Promote)
 	mux.HandleFunc("POST /chat/messages", chat.Create)
+	mux.HandleFunc("POST /chat/new", chat.New)
 	mux.HandleFunc("POST /chat/{id}/distill", chat.Distill)
 	mux.HandleFunc("GET /streams/chat/{id}", streams.Chat)
 	mux.HandleFunc("GET /topics/{id}/practice", practice.Index)

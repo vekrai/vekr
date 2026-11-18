@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"gorm.io/gorm"
 
@@ -11,6 +12,8 @@ import (
 )
 
 const dashboardListLimit = 5
+
+const recentChatsLimit = 3
 
 type DashboardHandler struct {
 	db   *gorm.DB
@@ -58,7 +61,22 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if view.Chat, err = h.chat.CurrentChat(); err != nil {
+	if rawChatID := r.URL.Query().Get("chat_id"); rawChatID != "" {
+		chatID, err := strconv.ParseUint(rawChatID, 10, 64)
+		if err != nil {
+			http.Error(w, "invalid chat_id", http.StatusBadRequest)
+			return
+		}
+		if view.Chat, err = h.chat.FindChat(uint(chatID)); err != nil || view.Chat.NodeID != nil {
+			http.NotFound(w, r)
+			return
+		}
+		view.ChatOpen = true
+	} else if view.Chat, err = h.chat.CurrentChat(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if view.RecentChats, err = h.chat.RecentChats(recentChatsLimit); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

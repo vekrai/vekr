@@ -17,6 +17,8 @@ type DashboardView struct {
 	Queue         []models.QueueItem
 	WeakSpots     []models.WeakSpot
 	Chat          models.Chat
+	ChatOpen      bool
+	RecentChats   []models.ChatSummary
 	Messages      []models.ChatMessage
 	MessageHTML   []string
 	ChatBusy      bool
@@ -118,7 +120,7 @@ templ dashboardContent(view DashboardView) {
 
 		<div class="flex flex-col gap-4 min-w-0">
 
-			@chatPanel(view.Chat, 0, view.Messages, view.MessageHTML, view.ChatBusy)
+			@dashboardChat(view.Chat, view.ChatOpen, view.RecentChats, view.Messages, view.MessageHTML, view.ChatBusy)
 
 			<div class="bg-surface border border-black/10 rounded-xl p-5">
 				<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ t(ctx, "dashboard.recent.title") }</h2>
