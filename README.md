@@ -15,33 +15,24 @@ Intake → Curriculum Builder → Scheduler ⇄ (Learning Session + Practice & A
 
 ## Features
 
-**Chat with V**
-- Tool-calling agent with replies streamed live into the page
-- Online web search (Tavily) and web page fetching, with size limits, timeouts, and safe redirects
-- Searches, reads, and edits your notes while answering
-- Context-aware: a chat opened from a note knows that note and its topic
-- Save any chat as a note
-
-**Notes and topics**
-- Markdown notes linked into one knowledge graph
-- Full-text search across all notes
-- Build a topic from a goal ("teach me X"): V previews a topic with outline notes and prerequisite links, and saves it only after you confirm
-- Turn any existing note into a topic
-- Topic status moves from not started → learning → practicing → mastered
-
-**Practice and grading**
-- Generated practice items: multiple choice, flashcards, open questions, and code
-- Multiple choice and flashcards are checked by exact match; open and code answers get qualitative feedback from the LLM
-- Mistakes are tagged with a concept and error type (misconception, careless slip, knowledge gap, calculation error)
-- Weak Spots tracks your most-missed concepts, with drills that mix items from different topics
-
-**Dashboard**
-- Today's queue of unfinished topics, ordered by latest activity
-- Topic progress, mastered topics, recent notes and chats, and stats
-
-**Languages and models**
-- English and 简体中文 UI, switched with the A/文 button; V replies in the chosen language
-- Works with any OpenAI-compatible model, local (llama.cpp, Ollama) or hosted
+| | Feature | What it does |
+| --- | --- | --- |
+| 💬 | **Chat with V** | Tool-calling agent with replies streamed live into the page |
+| 🌐 | **Web search & fetch** | Searches the web (Tavily) and reads pages, with size limits, timeouts, and safe redirects |
+| 🔎 | **Note-aware answers** | V searches, reads, and edits your notes while answering |
+| 📌 | **Context-aware chats** | A chat opened from a note knows that note and its topic |
+| 💾 | **Save chat as note** | Turn any conversation into a note in your knowledge base |
+| 📝 | **Notes & knowledge graph** | Markdown notes linked into one graph, with full-text search |
+| 🧭 | **Topic builder** | Ask "teach me X": V previews a topic with outline notes and prerequisites, and saves it only after you confirm |
+| 🔁 | **Note → topic** | Turn any existing note into a topic |
+| 📈 | **Topic status** | Progresses from not started → learning → practicing → mastered |
+| 🧩 | **Practice items** | Generated multiple choice, flashcards, open questions, and code |
+| ✅ | **AI grading** | Exact match for multiple choice and flashcards; qualitative LLM feedback for open and code answers |
+| 🏷️ | **Mistake tracking** | Each mistake is tagged with a concept and error type (misconception, careless slip, knowledge gap, calculation error) |
+| 🎯 | **Weak spots & drills** | Tracks your most-missed concepts and builds drills that mix items across topics |
+| 📊 | **Dashboard** | Today's queue, topic progress, mastered topics, recent notes and chats, and stats |
+| 🌏 | **English / 简体中文** | Switch with the A/文 button; V replies in the chosen language |
+| 🤖 | **Any OpenAI-compatible model** | Local (llama.cpp, Ollama) or hosted |
 
 ## Stack
 
