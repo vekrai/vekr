@@ -29,7 +29,7 @@ func NewRouter(app *App) http.Handler {
 	mux.HandleFunc("GET /topics/{id}/practice", practice.Index)
 	mux.HandleFunc("GET /drill", practice.Drill)
 	mux.HandleFunc("POST /practice_items/{id}/attempts", practice.Submit)
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
+	mux.Handle("GET /static/", Revalidate(http.StripPrefix("/static/", http.FileServer(http.Dir("web/static")))))
 
 	return Chain(mux, Recovery, Logging, app.Sessions.LoadAndSave, i18n.Middleware(app.Sessions))
 }

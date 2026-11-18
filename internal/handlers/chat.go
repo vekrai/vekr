@@ -34,10 +34,21 @@ func (h *ChatHandler) Create(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
+	} else if r.FormValue("node_id") == "" || r.FormValue("node_id") == "0" {
+		if content == "" {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+		var err error
+		chat, err = h.chat.StartChat()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	} else {
 		nodeID, err := strconv.ParseUint(r.FormValue("node_id"), 10, 64)
 		if err != nil {
-			http.Error(w, "chat_id or node_id is required", http.StatusBadRequest)
+			http.Error(w, "invalid node_id", http.StatusBadRequest)
 			return
 		}
 		if content == "" {

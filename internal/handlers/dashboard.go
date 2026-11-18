@@ -72,18 +72,19 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		view.ChatOpen = true
-	} else if view.Chat, err = h.chat.CurrentChat(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	} else if r.URL.Query().Get("chat") == "new" {
+		view.ChatOpen = true
 	}
 	if view.RecentChats, err = h.chat.RecentChats(recentChatsLimit); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	view.ChatBusy = h.chat.Busy(view.Chat.ID)
-	if view.Messages, err = h.chat.History(view.Chat.ID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if view.Chat.ID != 0 {
+		view.ChatBusy = h.chat.Busy(view.Chat.ID)
+		if view.Messages, err = h.chat.History(view.Chat.ID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 	if view.MessageHTML, err = renderMessages(view.Messages); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
