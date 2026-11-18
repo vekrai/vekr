@@ -1,17 +1,42 @@
-# Vekr
+# Vekr [English](README.md) | [简体中文](README_zh_CN.md)
 
 A personal learning agent. Chat with **V** to collect knowledge into notes, turn notes into topics, practice them with generated questions, and let the agent grade your answers and track your weak spots.
+
+![Vekr dashboard](docs/screenshots/dashboard-en.png)
 
 ```
 Intake → Curriculum Builder → Scheduler ⇄ (Learning Session + Practice & Assessment)
 ```
 
-- **Notes** are plain markdown content, linked into one knowledge graph and searchable with Postgres full-text search.
-- **Topics** group notes and are the unit of learning: each has a status (`not started` → `learning` → `practicing` → `mastered`) and its own practice items.
-- **Practice** items (multiple choice, flashcard, open, code) are generated from a topic and graded by the LLM, with mistakes attributed to fine-grained concepts.
-- **Dashboard** shows today's queue, topics and progress, recent notes and chats, weak spots with targeted drills, and stats.
-- **Chat with V** runs a tool-calling agent that can search and read your notes, search and fetch the web, build a curriculum, and generate practice items.
-- **English / 中文** UI, switched with the A/文 button in the top bar.
+## Features
+
+**Chat with V**
+- Tool-calling agent with replies streamed live into the page
+- Online web search (Tavily) and web page fetching, with size limits, timeouts, and safe redirects
+- Searches, reads, and edits your notes while answering
+- Context-aware: a chat opened from a note knows that note and its topic
+- Save any chat as a note
+
+**Notes and topics**
+- Markdown notes linked into one knowledge graph
+- Full-text search across all notes
+- Build a topic from a goal ("teach me X"): V previews a topic with outline notes and prerequisite links, and saves it only after you confirm
+- Turn any existing note into a topic
+- Topic status moves from not started → learning → practicing → mastered
+
+**Practice and grading**
+- Generated practice items: multiple choice, flashcards, open questions, and code
+- Multiple choice and flashcards are checked by exact match; open and code answers get qualitative feedback from the LLM
+- Mistakes are tagged with a concept and error type (misconception, careless slip, knowledge gap, calculation error)
+- Weak Spots tracks your most-missed concepts, with drills that mix items from different topics
+
+**Dashboard**
+- Today's queue of unfinished topics, ordered by latest activity
+- Topic progress, mastered topics, recent notes and chats, and stats
+
+**Languages and models**
+- English and 简体中文 UI, switched with the A/文 button; V replies in the chosen language
+- Works with any OpenAI-compatible model, local (llama.cpp, Ollama) or hosted
 
 ## Stack
 
@@ -52,6 +77,12 @@ mise run db:migrate
 APP_ENV=test mise run db:migrate
 ```
 
+Optionally load demo data, a set of English grammar topics with notes, practice attempts, weak spots, and chats:
+
+```sh
+mise run db:seed
+```
+
 ## Running
 
 ```sh
@@ -77,7 +108,7 @@ mise run serve                # run once, no watching
 mise run templates:generate   # templ generate
 mise run css:build            # rebuild web/static/css/app.css
 mise run db:migrate           # apply migrations
-mise run db:seed              # seed data
+mise run db:seed              # insert demo data (English grammar topics), skipped if topics exist
 mise run db:reset             # roll back all migrations, migrate, seed
 mise run test                 # go test ./... against vekr_test
 mise run js:vendor            # re-fetch vendored Turbo/Stimulus after a version bump
@@ -110,3 +141,7 @@ Generated files (`*_templ.go`, `web/static/css/app.css`) are committed. Regenera
 All UI strings go through `t(ctx, key)` in templates, and a test checks that every key used in a template exists in the catalog. The current language is stored in the single-row `settings` table and flipped between `en` and `zh` by `POST /locale`.
 
 To add another language: add `locales/<lang>.yaml` with the same keys as `locales/en.yaml`, extend the `locale` CHECK constraint on `settings` with a new migration, and replace the two-way toggle with a picker.
+
+## License
+
+[MIT](LICENSE)
