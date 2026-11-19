@@ -44,6 +44,13 @@ export default class extends Controller {
     window.Turbo.visit(this.urlWith({ chat: "new" }), { action: "replace" });
   }
 
+  suggest(event) {
+    if (!this.hasInputTarget || this.inputTarget.disabled) return;
+    this.inputTarget.value = event.currentTarget.dataset.text;
+    this.inputTarget.focus();
+    this.inputTarget.setSelectionRange(this.inputTarget.value.length, this.inputTarget.value.length);
+  }
+
   minimize() {
     this.modalTarget.hidden = true;
     this.sync();

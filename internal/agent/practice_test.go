@@ -153,3 +153,43 @@ func TestPracticeGenerateItemsSkipsUnknownType(t *testing.T) {
 		t.Errorf("got items %+v, want only the mcq item — unknown types should be skipped, not fail the batch", items)
 	}
 }
+
+func TestPracticeGenerateForConceptsFocusesOnWeakConcepts(t *testing.T) {
+	db := testDB(t)
+
+	topic := models.Topic{Title: "Tenses", Content: "present perfect vs simple past"}
+	if err := db.Create(&topic).Error; err != nil {
+		t.Fatalf("create topic: %v", err)
+	}
+	concept := models.Concept{Name: "since-vs-for", TopicID: &topic.ID}
+	if err := db.Create(&concept).Error; err != nil {
+		t.Fatalf("create concept: %v", err)
+	}
+
+	var body string
+	service := newPracticeService(t, db, func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		body = string(raw)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"choices": [{"message": {"role": "assistant", "content": "{\"items\":[{\"prompt\":\"___ 2020\",\"answer_key\":\"since\",\"type\":\"flashcard\",\"concepts\":[\"since-vs-for\"]}]}"}, "finish_reason": "stop"}]}`)
+	})
+
+	items, err := service.GenerateForConcepts(context.Background(), []uint{concept.ID}, 1)
+	if err != nil {
+		t.Fatalf("GenerateForConcepts: %v", err)
+	}
+	if len(items) != 1 || items[0].TopicID != topic.ID {
+		t.Fatalf("got %+v, want one item in the concept's topic", items)
+	}
+	if !strings.Contains(body, "since-vs-for") {
+		t.Errorf("request body should name the weak concept:\n%s", body)
+	}
+
+	var linked int64
+	if err := db.Table("practice_item_concepts").Where("practice_item_id = ? AND concept_id = ?", items[0].ID, concept.ID).Count(&linked).Error; err != nil {
+		t.Fatalf("count links: %v", err)
+	}
+	if linked != 1 {
+		t.Errorf("want the new item linked to the existing concept")
+	}
+}

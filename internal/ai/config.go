@@ -1,6 +1,9 @@
 package ai
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
 type Config struct {
 	Name           string
@@ -8,6 +11,7 @@ type Config struct {
 	APIKey         string
 	Model          string
 	MaxTokensField string
+	ContextWindow  int
 }
 
 func (c Config) maxTokensField() string {
@@ -27,11 +31,14 @@ func ConfigFromEnv() Config {
 		model = "qwen"
 	}
 
+	contextWindow, _ := strconv.Atoi(os.Getenv("AI_CONTEXT_WINDOW"))
+
 	return Config{
 		Name:           "local-qwen",
 		BaseURL:        baseURL,
 		APIKey:         os.Getenv("AI_API_KEY"),
 		Model:          model,
 		MaxTokensField: os.Getenv("AI_MAX_TOKENS_FIELD"),
+		ContextWindow:  contextWindow,
 	}
 }

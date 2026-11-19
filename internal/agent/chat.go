@@ -55,6 +55,10 @@ func (s *ChatService) Busy(chatID uint) bool {
 	return s.inFlight[chatID]
 }
 
+func (s *ChatService) ContextWindow() int {
+	return s.client.ContextWindow()
+}
+
 func (s *ChatService) LatestMessageID(chatID uint) (uint, error) {
 	var id uint
 	err := s.db.Model(&models.ChatMessage{}).Where("chat_id = ?", chatID).Select("COALESCE(MAX(id), 0)").Scan(&id).Error
@@ -305,7 +309,7 @@ func (s *ChatService) Reply(ctx context.Context, chatID uint) (models.ChatMessag
 		}
 
 		if len(resp.Message.ToolCalls) == 0 {
-			assistantMessage := models.ChatMessage{ChatID: chatID, Role: string(ai.RoleAssistant), Content: resp.Message.Content}
+			assistantMessage := models.ChatMessage{ChatID: chatID, Role: string(ai.RoleAssistant), Content: resp.Message.Content, TotalTokens: resp.Usage.TotalTokens}
 			if err := s.db.Create(&assistantMessage).Error; err != nil {
 				return models.ChatMessage{}, fmt.Errorf("agent: save assistant message: %w", err)
 			}
@@ -317,10 +321,11 @@ func (s *ChatService) Reply(ctx context.Context, chatID uint) (models.ChatMessag
 			return models.ChatMessage{}, fmt.Errorf("agent: encode tool calls: %w", err)
 		}
 		assistantMessage := models.ChatMessage{
-			ChatID:    chatID,
-			Role:      string(ai.RoleAssistant),
-			Content:   resp.Message.Content,
-			ToolCalls: string(toolCallsJSON),
+			ChatID:      chatID,
+			Role:        string(ai.RoleAssistant),
+			Content:     resp.Message.Content,
+			ToolCalls:   string(toolCallsJSON),
+			TotalTokens: resp.Usage.TotalTokens,
 		}
 		if err := s.db.Create(&assistantMessage).Error; err != nil {
 			return models.ChatMessage{}, fmt.Errorf("agent: save assistant tool-call message: %w", err)

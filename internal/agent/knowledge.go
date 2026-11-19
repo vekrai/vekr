@@ -18,18 +18,6 @@ func NewKnowledgeTools(db *gorm.DB) *KnowledgeTools {
 	return &KnowledgeTools{db: db}
 }
 
-type noteSearchResult struct {
-	NodeID  uint   `gorm:"column:node_id"`
-	TopicID *uint  `gorm:"column:topic_id"`
-	Title   string `gorm:"column:title"`
-	Snippet string `gorm:"column:snippet"`
-}
-
-func escapeLikePattern(s string) string {
-	replacer := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
-	return "%" + replacer.Replace(s) + "%"
-}
-
 // SearchNotes matches two ways: English full-text search (word-tokenized,
 // stemmed, ranked) and a trigram-based substring/similarity match. The
 // trigram path exists because to_tsvector('english', ...) only splits on
@@ -39,28 +27,7 @@ func escapeLikePattern(s string) string {
 // on raw character sequences instead of words, so it works regardless of
 // script.
 func (k *KnowledgeTools) SearchNotes(ctx context.Context, query string) (string, error) {
-	likePattern := escapeLikePattern(query)
-
-	var rows []noteSearchResult
-	err := k.db.WithContext(ctx).Raw(`
-		WITH candidates AS (
-			SELECT id, topic_id, title, content,
-			       to_tsvector('english', title || ' ' || content) AS tsv,
-			       plainto_tsquery('english', ?) AS tsq
-			FROM nodes
-		)
-		SELECT id AS node_id, topic_id, title,
-		       CASE
-		           WHEN tsv @@ tsq THEN ts_headline('english', content, tsq, 'MaxFragments=1,MaxWords=25')
-		           ELSE left(content, 160)
-		       END AS snippet
-		FROM candidates
-		WHERE tsv @@ tsq OR (title || ' ' || content) ILIKE ?
-		ORDER BY
-		    CASE WHEN tsv @@ tsq THEN ts_rank(tsv, tsq) ELSE 0 END DESC,
-		    similarity(title || ' ' || content, ?) DESC
-		LIMIT 10
-	`, query, likePattern, query).Scan(&rows).Error
+	rows, err := models.SearchNotes(k.db.WithContext(ctx), query, 10)
 	if err != nil {
 		return "", fmt.Errorf("search_notes: %w", err)
 	}

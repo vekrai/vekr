@@ -36,6 +36,12 @@ func loadChatState(chat *agent.ChatService, r *http.Request) (templates.ChatStat
 			if state.MessageHTML, err = renderMessages(state.Messages); err != nil {
 				return state, err
 			}
+			state.ContextWindow = chat.ContextWindow()
+			for _, m := range state.Messages {
+				if m.TotalTokens > 0 {
+					state.TokensUsed = m.TotalTokens
+				}
+			}
 			return state, nil
 		}
 	}

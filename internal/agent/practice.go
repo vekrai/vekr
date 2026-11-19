@@ -42,6 +42,39 @@ type generatedItem struct {
 // generator, no per-domain templates. Commits directly: practice items are
 // cheap to regenerate or delete, so there's no preview step.
 func (s *PracticeService) GenerateItems(ctx context.Context, topicID uint, count int) ([]models.PracticeItem, error) {
+	return s.generate(ctx, topicID, count, nil)
+}
+
+func (s *PracticeService) GenerateForConcepts(ctx context.Context, conceptIDs []uint, perTopic int) ([]models.PracticeItem, error) {
+	var concepts []models.Concept
+	if err := s.db.WithContext(ctx).Where("id IN ? AND topic_id IS NOT NULL", conceptIDs).Order("topic_id, name").Find(&concepts).Error; err != nil {
+		return nil, fmt.Errorf("agent: generate drill items: load concepts: %w", err)
+	}
+
+	var topicOrder []uint
+	focus := map[uint][]string{}
+	for _, c := range concepts {
+		if _, seen := focus[*c.TopicID]; !seen {
+			topicOrder = append(topicOrder, *c.TopicID)
+		}
+		focus[*c.TopicID] = append(focus[*c.TopicID], c.Name)
+	}
+	if len(topicOrder) == 0 {
+		return nil, fmt.Errorf("agent: generate drill items: no topic owns these concepts")
+	}
+
+	var all []models.PracticeItem
+	for _, topicID := range topicOrder {
+		items, err := s.generate(ctx, topicID, perTopic, focus[topicID])
+		if err != nil {
+			return all, err
+		}
+		all = append(all, items...)
+	}
+	return all, nil
+}
+
+func (s *PracticeService) generate(ctx context.Context, topicID uint, count int, focus []string) ([]models.PracticeItem, error) {
 	var topic models.Topic
 	if err := s.db.WithContext(ctx).First(&topic, topicID).Error; err != nil {
 		return nil, fmt.Errorf("agent: generate practice items: topic %d not found", topicID)
@@ -58,6 +91,9 @@ func (s *PracticeService) GenerateItems(ctx context.Context, topicID uint, count
 		fmt.Fprintf(&material, "\n## %s\n\n%s\n", note.Title, note.Content)
 	}
 	fmt.Fprintf(&material, "\nGenerate %d practice items.", count)
+	if len(focus) > 0 {
+		fmt.Fprintf(&material, " The user keeps making mistakes on these concepts, so every item must test at least one of them, tagged with these exact concept names: %s. Write new questions that approach them from a different angle than a textbook example.", strings.Join(focus, ", "))
+	}
 	prompt := material.String()
 
 	req := []ai.Message{

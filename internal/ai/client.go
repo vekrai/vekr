@@ -32,6 +32,10 @@ func NewClient(config Config, httpClient *http.Client) *Client {
 	return &Client{config: config, httpClient: httpClient}
 }
 
+func (c *Client) ContextWindow() int {
+	return c.config.ContextWindow
+}
+
 func (c *Client) payload(req ChatRequest, stream bool) map[string]any {
 	payload := map[string]any{
 		"model":    c.config.Model,

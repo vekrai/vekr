@@ -14,6 +14,8 @@ func importMap() string {
 	}, "js/controllers") + `</script>`
 }
 
+const themeBootScript = `<script>(function(){var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")})()</script>`
+
 templ layout(content templ.Component) {
 	@layoutFor(0, content)
 }
@@ -27,6 +29,7 @@ templ layoutFor(nodeID uint, content templ.Component) {
 		<title>{ t(ctx, "app.title") }</title>
 		<meta name="turbo-refresh-method" content="morph"/>
 		<meta name="turbo-refresh-scroll" content="preserve"/>
+		@templ.Raw(themeBootScript)
 		<link rel="icon" type="image/svg+xml" href={ assets.Path("images/logo.svg") }/>
 		<link rel="stylesheet" href={ assets.Path("css/app.css") } data-turbo-track="reload"/>
 		@templ.Raw(importMap())
@@ -34,15 +37,18 @@ templ layoutFor(nodeID uint, content templ.Component) {
 	</head>
 	<body class="m-0 bg-page text-ink font-sans">
 		{{ chat := chatState(ctx) }}
-		<div class="max-w-[1180px] mx-auto px-6 pt-5 pb-14" data-controller="chat-modal" data-chat-modal-chat-id-value={ fmt.Sprintf("%d", chat.Chat.ID) } data-action="turbo:morph@document->chat-modal#sync">
-			<div class="flex items-center gap-4 mb-5">
-				<a href="/" class="w-9 h-9 shrink-0"><img src={ assets.Path("images/logo.svg") } alt={ t(ctx, "app.title") } class="w-9 h-9"/></a>
-				<div class="ml-auto w-full max-w-sm">
+		<div class="max-w-[1180px] mx-auto px-4 sm:px-6 pt-5 pb-14" data-controller="chat-modal" data-chat-modal-chat-id-value={ fmt.Sprintf("%d", chat.Chat.ID) } data-action="turbo:morph@document->chat-modal#sync">
+			<div class="flex items-center gap-2 sm:gap-3 mb-6">
+				<a href="/" class="w-9 h-9 shrink-0 dark:invert" aria-label={ t(ctx, "nav.dashboard") }><img src={ assets.Path("images/logo.svg") } alt={ t(ctx, "app.title") } class="w-9 h-9"/></a>
+				<div class="ml-auto w-full max-w-sm min-w-0">
 					@chatLauncher(nodeID)
 				</div>
+				@themeToggle()
 				@localeToggle(chat.PagePath)
 			</div>
-			@content
+			<main>
+				@content
+			</main>
 			@chatModal(chat, nodeID)
 		</div>
 	</body>
@@ -53,7 +59,7 @@ templ localeToggle(returnTo string) {
 	{{ zh := i18n.Lang(ctx) == "zh" }}
 	<form method="post" action="/locale" class="shrink-0">
 		<input type="hidden" name="return_to" value={ returnTo }/>
-		<button type="submit" class="h-9 px-3 rounded-lg border border-black/10 bg-surface text-sm text-ink-muted hover:border-black/20 flex items-center gap-1" title={ t(ctx, "locale.toggle") } aria-label={ t(ctx, "locale.toggle") }>
+		<button type="submit" class="h-9 px-3 rounded-lg border border-line bg-surface text-sm text-ink-muted hover:border-line-strong flex items-center gap-1" title={ t(ctx, "locale.toggle") } aria-label={ t(ctx, "locale.toggle") }>
 			<span class={ templ.KV("font-bold text-ink", !zh) }>A</span>
 			<span>/</span>
 			<span class={ templ.KV("font-bold text-ink", zh) }>文</span>

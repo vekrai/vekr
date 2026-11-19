@@ -8,12 +8,14 @@ import (
 )
 
 type ChatState struct {
-	Chat        models.Chat
-	Open        bool
-	Messages    []models.ChatMessage
-	MessageHTML []string
-	Busy        bool
-	PagePath    string
+	Chat          models.Chat
+	Open          bool
+	Messages      []models.ChatMessage
+	MessageHTML   []string
+	Busy          bool
+	PagePath      string
+	TokensUsed    int
+	ContextWindow int
 }
 
 type chatLoaderKey struct{}

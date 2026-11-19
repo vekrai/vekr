@@ -19,6 +19,8 @@ type App struct {
 	Distill    *agent.DistillService
 	Curriculum *agent.CurriculumService
 	Grading    *agent.GradingService
+	Practice   *agent.PracticeService
+	Explain    *agent.ExplainService
 	Hub        *live.Hub
 }
 
@@ -42,6 +44,7 @@ func NewApp(db *gorm.DB) *App {
 
 	chat := agent.NewChatService(db, aiClient, tools, hub)
 	distill := agent.NewDistillService(db, aiClient)
+	explain := agent.NewExplainService(db, aiClient)
 
-	return &App{DB: db, Sessions: sessions, Chat: chat, Distill: distill, Curriculum: curriculum, Grading: grading, Hub: hub}
+	return &App{DB: db, Sessions: sessions, Chat: chat, Distill: distill, Curriculum: curriculum, Grading: grading, Practice: practice, Explain: explain, Hub: hub}
 }

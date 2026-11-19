@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-surface: #fcfcfb;
   --color-page: #f9f9f7;
@@ -7,12 +9,148 @@
   --color-ink-secondary: #52514e;
   --color-ink-muted: #898781;
   --color-gridline: #e1e0d9;
+  --color-line: rgb(0 0 0 / 0.1);
+  --color-line-strong: rgb(0 0 0 / 0.22);
   --color-accent: #4a9b7d;
-  --color-serious: #ec835a;
-  --color-good: #0ca30c;
+  --color-serious: #d9693f;
+  --color-warning: #b7851c;
+  --color-good: #2f8f46;
+}
+
+html.dark {
+  color-scheme: dark;
+  --color-surface: #1c1c1b;
+  --color-page: #141413;
+  --color-ink: #ecebe7;
+  --color-ink-secondary: #b4b2ab;
+  --color-ink-muted: #85837d;
+  --color-gridline: #2d2d2b;
+  --color-line: rgb(255 255 255 / 0.1);
+  --color-line-strong: rgb(255 255 255 / 0.24);
+  --color-accent: #6db99b;
+  --color-serious: #ef9472;
+  --color-warning: #dcae4a;
+  --color-good: #5cc274;
 }
 
 @layer components {
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: var(--color-ink-secondary);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 0.875rem;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:disabled,
+    &[aria-disabled="true"] {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  .btn-primary {
+    background: var(--color-ink);
+    color: var(--color-surface);
+
+    &:hover:not(:disabled) {
+      opacity: 0.85;
+    }
+  }
+
+  .btn-secondary {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    border: 1px solid var(--color-line-strong);
+
+    &:hover:not(:disabled) {
+      background: var(--color-page);
+    }
+  }
+
+  .btn-quiet {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-ink-secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+
+    &:hover {
+      background: var(--color-page);
+      color: var(--color-ink);
+    }
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    line-height: 1.4;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid var(--color-gridline);
+    background: var(--color-page);
+    color: var(--color-ink-secondary);
+    white-space: nowrap;
+  }
+
+  .chip-good {
+    border-color: color-mix(in srgb, var(--color-good) 35%, transparent);
+    background: color-mix(in srgb, var(--color-good) 10%, transparent);
+    color: var(--color-good);
+  }
+
+  .chip-warning {
+    border-color: color-mix(in srgb, var(--color-warning) 35%, transparent);
+    background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+    color: var(--color-warning);
+  }
+
+  .chip-serious {
+    border-color: color-mix(in srgb, var(--color-serious) 35%, transparent);
+    background: color-mix(in srgb, var(--color-serious) 10%, transparent);
+    color: var(--color-serious);
+  }
+
+  .field {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--color-line);
+    border-radius: 0.5rem;
+    background: var(--color-page);
+    color: var(--color-ink);
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+    outline: none;
+
+    &::placeholder {
+      color: var(--color-ink-muted);
+    }
+
+    &:focus {
+      border-color: var(--color-line-strong);
+    }
+  }
+
   .markdown {
     line-height: 1.65;
     overflow-wrap: break-word;

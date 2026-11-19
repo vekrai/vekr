@@ -8,12 +8,12 @@ export default class extends Controller {
   keydown(event) {
     if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return;
 
-    if (event.ctrlKey || event.metaKey) {
+    if (event.altKey) {
       event.preventDefault();
       this.insertNewline();
       return;
     }
-    if (event.shiftKey || event.altKey) return;
+    if (event.shiftKey) return;
 
     event.preventDefault();
     if (this.submitting || this.element.disabled || this.element.value.trim() === "") return;

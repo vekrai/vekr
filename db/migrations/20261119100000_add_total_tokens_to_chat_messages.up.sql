@@ -1,0 +1,1 @@
+ALTER TABLE chat_messages ADD COLUMN total_tokens INTEGER NOT NULL DEFAULT 0;

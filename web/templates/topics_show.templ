@@ -2,45 +2,112 @@ package templates
 
 import (
 	"fmt"
+	"net/url"
 
 	"vekr/internal/models"
 )
 
-templ TopicsShow(progress models.TopicProgress, contentHTML string, notes []models.Node) {
-	@layout(topicsShowContent(progress, contentHTML, notes))
+func conceptDrillURL(id uint) string {
+	return "/drill?" + url.Values{"concept_id": {fmt.Sprintf("%d", id)}}.Encode()
 }
 
-templ topicsShowContent(progress models.TopicProgress, contentHTML string, notes []models.Node) {
-	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
-		<div class="flex justify-between items-center gap-3 mb-3.5">
-			<h2 class="flex-1 text-[13px] font-semibold uppercase tracking-wide text-ink-secondary">{ progress.Topic.Title }</h2>
-			<span class="shrink-0 text-[11px] px-2 py-0.5 rounded-full border border-gridline bg-page text-ink-secondary">{ t(ctx, "topic.status."+progress.Topic.Status) }</span>
-			<a class="shrink-0 text-xs text-ink-secondary hover:underline" href={ templ.URL(fmt.Sprintf("/topics/%d/practice", progress.Topic.ID)) }>{ t(ctx, "topic.practice") }</a>
-		</div>
-		if progress.Topic.Content != "" {
-			<div class="markdown text-sm mb-3.5">
-				@templ.Raw(contentHTML)
-			</div>
-		}
-		<div class="flex justify-between gap-3 text-xs text-ink-secondary mb-1.5">
-			<span>{ tData(ctx, "topic.progress", map[string]any{"Passed": progress.Passed, "Total": progress.Total}) }</span>
-		</div>
-		<div class="h-2 rounded bg-accent/20 overflow-hidden">
-			<div class="h-full rounded bg-accent" style={ fmt.Sprintf("width: %.0f%%", progressPercent(progress)) }></div>
-		</div>
-	</div>
+templ TopicsShow(view TopicView) {
+	@layout(topicsShowContent(view))
+}
 
-	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
-		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ t(ctx, "topic.notes") }</h2>
-		if len(notes) == 0 {
-			<p class="text-xs text-ink-muted">{ t(ctx, "topic.notes_empty") }</p>
-		} else {
-			for _, node := range notes {
-				<div class="text-sm py-2 border-b border-gridline last:border-b-0">
-					<a class="text-ink hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", node.ID)) }>{ node.Title }</a>
+templ topicsShowContent(view TopicView) {
+	{{ topic := view.Progress.Topic }}
+	@pageHeader([]crumb{dashboardCrumb(ctx)}, topic.Title) {
+		<span class="chip" title={ t(ctx, "topic.status_hint."+topic.Status) }>{ t(ctx, "topic.status."+topic.Status) }</span>
+		<a class="btn btn-primary" href={ templ.URL(fmt.Sprintf("/topics/%d/practice", topic.ID)) }>{ t(ctx, "topic.practice") }</a>
+	}
+	<div class="grid grid-cols-1 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-4">
+		<div class="flex flex-col gap-4 min-w-0">
+			<section class="card">
+				if topic.Content != "" {
+					<div class="markdown text-[15px] mb-4">
+						@templ.Raw(view.ContentHTML)
+					</div>
+				}
+				<div class="text-xs text-ink-secondary mb-1.5">{ tData(ctx, "topic.progress", map[string]any{"Passed": view.Progress.Passed, "Total": view.Progress.Total}) }</div>
+				<div class="h-2 rounded bg-accent/15 overflow-hidden">
+					<div class="h-full rounded bg-accent" style={ fmt.Sprintf("width: %.0f%%", percent(view.Progress.Passed, view.Progress.Total)) }></div>
 				</div>
-			}
-		}
-		<a class="inline-block mt-3 text-xs text-accent hover:underline" href="/">{ t(ctx, "topic.back") }</a>
+			</section>
+
+			<section class="card">
+				<h2 class="section-title mb-3">{ t(ctx, "topic.notes") }</h2>
+				if len(view.Notes) == 0 {
+					@emptyText(t(ctx, "topic.notes_empty"))
+				} else {
+					<ol>
+						for i, node := range view.Notes {
+							<li class="flex items-baseline gap-3 text-sm py-2 border-b border-gridline last:border-b-0">
+								<span class="w-5 shrink-0 text-xs text-ink-muted tabular-nums">{ fmt.Sprintf("%d", i+1) }</span>
+								<a class="hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", node.ID)) }>{ node.Title }</a>
+							</li>
+						}
+					</ol>
+				}
+			</section>
+
+			<section class="card">
+				<h2 class="section-title mb-1">{ t(ctx, "topic.explain.title") }</h2>
+				<p class="text-sm text-ink-secondary mb-3">{ t(ctx, "topic.explain.hint") }</p>
+				<form method="POST" action={ templ.URL(fmt.Sprintf("/topics/%d/explain", topic.ID)) }>
+					<textarea class="field resize-y" name="explanation" rows="5" required placeholder={ t(ctx, "topic.explain.placeholder") }></textarea>
+					<button class="btn btn-secondary mt-3" type="submit" data-turbo-submits-with={ t(ctx, "topic.explain.submitting") }>{ t(ctx, "topic.explain.submit") }</button>
+				</form>
+			</section>
+		</div>
+
+		<div class="flex flex-col gap-4 min-w-0">
+			<section class="card">
+				<h2 class="section-title mb-3">{ t(ctx, "topic.concepts") }</h2>
+				if len(view.Concepts) == 0 {
+					@emptyText(t(ctx, "topic.concepts_empty"))
+				} else {
+					<ul>
+						for _, c := range view.Concepts {
+							<li class="flex items-center gap-3 text-sm py-2 border-b border-gridline last:border-b-0">
+								if c.MissCount > 0 {
+									<span class="w-1.5 h-1.5 rounded-full bg-serious shrink-0" aria-hidden="true"></span>
+								} else {
+									<span class="w-1.5 h-1.5 rounded-full bg-gridline shrink-0" aria-hidden="true"></span>
+								}
+								<span class="flex-1 min-w-0 break-words">{ humanize(c.Name) }</span>
+								if c.MissCount > 0 {
+									<span class="shrink-0 text-xs text-ink-muted">{ tCount(ctx, "dashboard.weak.missed", c.AttemptCount, map[string]any{"Misses": c.MissCount}) }</span>
+									<a class="shrink-0 text-xs text-accent hover:underline" href={ templ.URL(conceptDrillURL(c.ID)) }>{ t(ctx, "dashboard.weak.drill") }</a>
+								}
+							</li>
+						}
+					</ul>
+				}
+			</section>
+
+			<section class="card">
+				<h2 class="section-title mb-3">{ t(ctx, "topic.attempts") }</h2>
+				if len(view.Attempts) == 0 {
+					@emptyText(t(ctx, "topic.attempts_empty"))
+				} else {
+					<ul>
+						for _, a := range view.Attempts {
+							@attemptRow(a)
+						}
+					</ul>
+				}
+			</section>
+		</div>
 	</div>
+}
+
+templ attemptRow(a models.AttemptResult) {
+	<li class="py-2 border-b border-gridline last:border-b-0">
+		<div class="flex items-center gap-2 mb-0.5">
+			<span class={ verdictClass(a) }>{ verdictLabel(ctx, a) }</span>
+			<span class="ml-auto text-[11px] text-ink-muted">{ relativeDate(ctx, a.CreatedAt) }</span>
+		</div>
+		<p class="text-xs text-ink-secondary line-clamp-2">{ firstLine(a.Prompt) }</p>
+	</li>
 }

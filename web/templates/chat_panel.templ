@@ -17,34 +17,74 @@ func chatStreamURL(chat models.Chat, messages []models.ChatMessage) string {
 	return fmt.Sprintf("/streams/chat/%d?after=%d", chat.ID, latest)
 }
 
+func onNote(chat models.Chat, nodeID uint) bool {
+	return chat.NodeID != nil || (chat.ID == 0 && nodeID != 0)
+}
+
 func chatPlaceholder(ctx context.Context, chat models.Chat, nodeID uint) string {
-	if chat.NodeID != nil || (chat.ID == 0 && nodeID != 0) {
+	if onNote(chat, nodeID) {
 		return t(ctx, "chat.placeholder_note")
 	}
 	return t(ctx, "chat.placeholder")
 }
 
+func chatSuggestions(ctx context.Context, chat models.Chat, nodeID uint) []string {
+	prefix := "chat.suggest."
+	if onNote(chat, nodeID) {
+		prefix = "chat.suggest_note."
+	}
+	return []string{t(ctx, prefix+"1"), t(ctx, prefix+"2"), t(ctx, prefix+"3")}
+}
+
 templ chatSaveButton(chat models.Chat) {
 	<form method="POST" action={ templ.URL(fmt.Sprintf("/chat/%d/distill", chat.ID)) }>
-		<button class="text-xs text-ink-secondary hover:underline" type="submit">{ t(ctx, "chat.save_as_note") }</button>
+		<button class="btn-quiet cursor-pointer" type="submit" data-turbo-submits-with={ t(ctx, "chat.saving") }>{ t(ctx, "chat.save_as_note") }</button>
 	</form>
 }
 
 templ chatMessages(messages []models.ChatMessage, messageHTML []string, busy bool) {
+	{{ results := toolResults(ctx, messages) }}
 	for i, m := range messages {
-		if m.Role == "user" {
-			<div class="markdown text-sm self-end max-w-[85%] min-w-0 bg-ink text-surface rounded-lg px-3 py-1.5">
-				@templ.Raw(messageHTML[i])
-			</div>
-		} else {
-			<div class="markdown text-sm self-start max-w-[85%] min-w-0 bg-page border border-black/10 rounded-lg px-3 py-1.5">
-				@templ.Raw(messageHTML[i])
-			</div>
+		switch m.Role {
+			case "user":
+				<div class="markdown text-sm self-end max-w-[85%] min-w-0 bg-ink text-surface rounded-lg px-3 py-1.5">
+					@templ.Raw(messageHTML[i])
+				</div>
+			case "tool":
+			default:
+				for _, call := range toolCalls(ctx, m, results) {
+					<div class="self-start flex items-baseline gap-1.5 text-xs text-ink-muted min-w-0 max-w-full">
+						<span aria-hidden="true">↳</span>
+						<span class="shrink-0">{ call.Label }</span>
+						if call.Detail != "" {
+							<span class="truncate text-ink-secondary">{ call.Detail }</span>
+						}
+						if call.Result != "" {
+							<span class="shrink-0">· { call.Result }</span>
+						}
+					</div>
+				}
+				if m.Content != "" {
+					<div class="markdown text-sm self-stretch min-w-0 py-1">
+						@templ.Raw(messageHTML[i])
+					</div>
+				}
 		}
 	}
 	if busy {
-		<div class="text-sm self-start max-w-[85%] bg-page border border-black/10 rounded-lg px-3 py-1.5 text-ink-muted">{ t(ctx, "chat.thinking") }<span class="thinking-dots" aria-hidden="true"></span></div>
+		<div class="text-sm self-start text-ink-muted py-1">{ t(ctx, "chat.thinking") }<span class="thinking-dots" aria-hidden="true"></span></div>
 	}
+}
+
+templ chatSuggestionList(state ChatState, nodeID uint) {
+	<div class="m-auto w-full max-w-md text-center">
+		<p class="text-sm text-ink-secondary mb-4">{ t(ctx, "chat.empty") }</p>
+		<div class="flex flex-col gap-2">
+			for _, s := range chatSuggestions(ctx, state.Chat, nodeID) {
+				<button type="button" class="btn btn-secondary font-normal whitespace-normal text-left justify-start" data-action="chat-modal#suggest" data-text={ s }>{ s }</button>
+			}
+		</div>
+	</div>
 }
 
 templ chatForm(state ChatState, nodeID uint) {
@@ -55,34 +95,41 @@ templ chatForm(state ChatState, nodeID uint) {
 		} else {
 			<input type="hidden" name="node_id" value={ fmt.Sprintf("%d", nodeID) }/>
 		}
-		<div class="border border-black/10 rounded-lg bg-page p-2.5">
+		<div class="border border-line rounded-lg bg-page p-2.5 focus-within:border-line-strong">
 			<textarea data-chat-modal-target="input" data-controller="chat-input" data-action="keydown->chat-input#keydown" class="block w-full bg-transparent text-sm resize-none outline-none placeholder:text-ink-muted" name="content" placeholder={ chatPlaceholder(ctx, state.Chat, nodeID) } rows="2" disabled?={ state.Busy }></textarea>
-			<div class="flex justify-end items-center mt-1.5">
-				<button class="bg-ink text-surface rounded-md py-1.5 px-3.5 text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed" type="submit" disabled?={ state.Busy }>{ t(ctx, "chat.send") }</button>
+			<div class="flex justify-between items-center gap-3 mt-1.5">
+				<span class="text-[11px] text-ink-muted tabular-nums">{ tokenUsage(ctx, state) }</span>
+				<button class="btn btn-primary py-1.5" type="submit" disabled?={ state.Busy }>{ t(ctx, "chat.send") }</button>
 			</div>
 		</div>
 	</form>
 }
 
 templ chatLauncher(nodeID uint) {
-	<input class="block w-full h-9 border border-black/10 rounded-lg bg-surface px-3 text-sm outline-none placeholder:text-ink-muted cursor-text hover:border-black/20" type="text" placeholder={ chatPlaceholder(ctx, models.Chat{}, nodeID) } readonly data-action="click->chat-modal#openNew focus->chat-modal#openNew"/>
+	<input class="block w-full h-9 border border-line rounded-lg bg-surface px-3 text-sm outline-none placeholder:text-ink-muted cursor-text hover:border-line-strong" type="text" placeholder={ chatPlaceholder(ctx, models.Chat{}, nodeID) } aria-label={ chatPlaceholder(ctx, models.Chat{}, nodeID) } readonly data-action="click->chat-modal#openNew focus->chat-modal#openNew"/>
 }
 
 templ chatModal(state ChatState, nodeID uint) {
-	<div data-chat-modal-target="modal" data-action="click->chat-modal#backdrop" class="fixed inset-0 z-50 bg-ink/30 flex items-center justify-center p-6" hidden?={ !state.Open }>
-		<div class="bg-surface border border-black/10 rounded-xl shadow-xl w-full max-w-3xl h-[85vh] flex flex-col p-5">
+	<div data-chat-modal-target="modal" data-action="click->chat-modal#backdrop" class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3 sm:p-6" hidden?={ !state.Open }>
+		<div class="bg-surface border border-line rounded-xl shadow-xl w-full max-w-3xl h-[85vh] flex flex-col p-4 sm:p-5" role="dialog" aria-modal="true" aria-label={ t(ctx, "chat.title") }>
 			if state.Chat.ID != 0 {
 				<turbo-stream-source src={ chatStreamURL(state.Chat, state.Messages) }></turbo-stream-source>
 			}
-			<div class="flex items-center gap-4 mb-3.5">
-				<h2 class="flex-1 text-[13px] font-semibold uppercase tracking-wide text-ink-secondary">{ t(ctx, "chat.title") }</h2>
+			<div class="flex items-center gap-2 mb-3">
+				<h2 class="flex-1 section-title">{ t(ctx, "chat.title") }</h2>
 				if len(state.Messages) > 0 && !state.Busy {
 					@chatSaveButton(state.Chat)
 				}
-				<button class="w-7 h-7 rounded-md text-ink-secondary hover:bg-page flex items-center justify-center text-lg leading-none" type="button" title={ t(ctx, "chat.minimize") } aria-label={ t(ctx, "chat.minimize") } data-action="chat-modal#minimize">–</button>
+				<button class="w-8 h-8 rounded-md text-ink-secondary hover:bg-page hover:text-ink flex items-center justify-center" type="button" title={ t(ctx, "chat.minimize") } aria-label={ t(ctx, "chat.minimize") } data-action="chat-modal#minimize">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg>
+				</button>
 			</div>
-			<div data-chat-modal-target="messages" class="flex-1 min-h-0 flex flex-col gap-2 mb-2.5 overflow-y-auto">
-				@chatMessages(state.Messages, state.MessageHTML, state.Busy)
+			<div data-chat-modal-target="messages" class="flex-1 min-h-0 flex flex-col gap-2.5 mb-3 overflow-y-auto">
+				if len(state.Messages) == 0 && !state.Busy {
+					@chatSuggestionList(state, nodeID)
+				} else {
+					@chatMessages(state.Messages, state.MessageHTML, state.Busy)
+				}
 			</div>
 			@chatForm(state, nodeID)
 		</div>

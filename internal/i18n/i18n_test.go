@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"golang.org/x/text/language"
+	"gopkg.in/yaml.v3"
 )
 
 func TestResolveFallsBackToEnglish(t *testing.T) {
@@ -35,8 +36,8 @@ func TestTranslateLooksUpCatalog(t *testing.T) {
 	if got := TData(ctx, "practice.title", map[string]any{"Title": "Recursion"}); got != "Practice: Recursion" {
 		t.Errorf("TData(practice.title) = %q", got)
 	}
-	if got := TCount(ctx, "notes.count", 1, nil); got != "1 item" {
-		t.Errorf("TCount(notes.count, 1) = %q, want %q", got, "1 item")
+	if got := TCount(ctx, "notes.count", 1, nil); got != "1 note" {
+		t.Errorf("TCount(notes.count, 1) = %q, want %q", got, "1 note")
 	}
 	if got := TCount(ctx, "dashboard.weak.missed", 3, map[string]any{"Misses": 2}); got != "missed 2 of 3 attempts" {
 		t.Errorf("TCount(dashboard.weak.missed, 3) = %q", got)
@@ -79,9 +80,58 @@ func TestEveryTemplateKeyExistsInCatalog(t *testing.T) {
 		}
 	}
 
-	for _, kind := range []string{"learn", "practice"} {
-		if !bundleHas(ctx, "queue.kind."+kind) {
-			t.Errorf("queue.kind.%s is missing from locales/en.yaml", kind)
+	dynamic := []string{"queue.kind.learn", "queue.kind.practice"}
+	for _, status := range []string{"not_started", "learning", "practicing", "mastered"} {
+		dynamic = append(dynamic, "topic.status."+status, "topic.status_hint."+status)
+	}
+	for _, itemType := range []string{"mcq", "flashcard", "open", "code"} {
+		dynamic = append(dynamic, "practice.type."+itemType)
+	}
+	for _, verdict := range []string{"passed", "passed_with_note", "not_yet"} {
+		dynamic = append(dynamic, "practice.verdict."+verdict)
+	}
+	for _, relation := range []string{"prerequisite_of", "related", "source_of"} {
+		dynamic = append(dynamic, "note.relation."+relation+".in", "note.relation."+relation+".out")
+	}
+	for _, tool := range []string{"websearch", "webfetch", "search_notes", "read_note", "edit_note", "generate_curriculum_preview", "commit_curriculum_preview", "generate_practice_items"} {
+		dynamic = append(dynamic, "chat.tool."+tool)
+	}
+	for _, n := range []string{"1", "2", "3"} {
+		dynamic = append(dynamic, "chat.suggest."+n, "chat.suggest_note."+n)
+	}
+	for _, id := range dynamic {
+		if !bundleHas(ctx, id) {
+			t.Errorf("%s is missing from locales/en.yaml", id)
+		}
+	}
+}
+
+func TestLocalesHaveTheSameKeys(t *testing.T) {
+	keys := func(name string) map[string]bool {
+		src, err := os.ReadFile(filepath.Join("../../locales", name))
+		if err != nil {
+			t.Fatalf("read %s: %v", name, err)
+		}
+		var catalog map[string]any
+		if err := yaml.Unmarshal(src, &catalog); err != nil {
+			t.Fatalf("parse %s: %v", name, err)
+		}
+		out := make(map[string]bool, len(catalog))
+		for k := range catalog {
+			out[k] = true
+		}
+		return out
+	}
+
+	en, zh := keys("en.yaml"), keys("zh.yaml")
+	for k := range en {
+		if !zh[k] {
+			t.Errorf("%s is in en.yaml but missing from zh.yaml", k)
+		}
+	}
+	for k := range zh {
+		if !en[k] {
+			t.Errorf("%s is in zh.yaml but missing from en.yaml", k)
 		}
 	}
 }

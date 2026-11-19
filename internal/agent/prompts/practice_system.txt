@@ -5,7 +5,9 @@ trivia.
 Pick whichever item type suits the material best per item: "mcq" (multiple
 choice — list the options in the prompt itself, one per line, labelled A, B,
 C, D; answer_key is only the letter of the correct option, e.g. "B"), "flashcard"
-(short recall — answer_key is the exact expected answer), "open" (a
+(short recall — answer_key is the exact expected answer, a single word or
+short phrase, because it is graded by exact match; anything that needs an
+explanation must be "open"), "open" (a
 written explanation — answer_key can be a model answer for later
 reference, or empty), or "code" (a coding exercise — answer_key is empty,
 there is no execution sandbox, grading is done by reading the submission).

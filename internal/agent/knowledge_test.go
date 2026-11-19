@@ -51,6 +51,25 @@ func TestKnowledgeToolsSearchAndReadNote(t *testing.T) {
 	}
 }
 
+func TestKnowledgeToolsSearchNotesMatchesAnyWord(t *testing.T) {
+	db := testDB(t)
+
+	node := models.Node{Title: "Present Perfect: Time Up to Now", Content: "Use have/has + past participle when the time period is not finished."}
+	if err := db.Create(&node).Error; err != nil {
+		t.Fatalf("create node: %v", err)
+	}
+
+	tools := NewKnowledgeTools(db)
+
+	result, err := tools.SearchNotes(context.Background(), "tenses past simple present perfect grammar")
+	if err != nil {
+		t.Fatalf("SearchNotes: %v", err)
+	}
+	if !strings.Contains(result, "Present Perfect: Time Up to Now") {
+		t.Errorf("got %q, want a match even though not every query word appears in the note", result)
+	}
+}
+
 func TestKnowledgeToolsSearchNotesMatchesCJKSubstring(t *testing.T) {
 	db := testDB(t)
 

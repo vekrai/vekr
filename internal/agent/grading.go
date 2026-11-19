@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"vekr/internal/ai"
+	"vekr/internal/i18n"
 	"vekr/internal/models"
 )
 
@@ -55,6 +56,9 @@ func (s *GradingService) Grade(ctx context.Context, practiceItemID uint, submiss
 			expected = *item.AnswerKey
 		}
 		result = gradeResult{Passed: strings.EqualFold(strings.TrimSpace(submission), strings.TrimSpace(expected))}
+		if !result.Passed && expected != "" {
+			result.Feedback = i18n.TData(ctx, "practice.feedback.expected", map[string]any{"Answer": item.ExpectedAnswer()})
+		}
 	default:
 		var err error
 		result, err = s.judge(ctx, item, submission)

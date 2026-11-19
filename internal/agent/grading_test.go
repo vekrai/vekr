@@ -71,6 +71,30 @@ func TestGradeMCQExactMatchNoModelCall(t *testing.T) {
 	}
 }
 
+func TestGradeMCQWrongAnswerExplainsExpectedChoice(t *testing.T) {
+	db := testDB(t)
+
+	answerKey := "B"
+	item := seedPracticeItem(t, db, models.PracticeItemTypeMCQ, &answerKey)
+	if err := db.Model(&item).Update("prompt", "Choose one.\nA) I have seen it last night.\nB) I saw it last night.").Error; err != nil {
+		t.Fatalf("update prompt: %v", err)
+	}
+
+	service := newGradingService(t, db, func(w http.ResponseWriter, r *http.Request) {})
+
+	attempt, err := service.Grade(context.Background(), item.ID, "a")
+	if err != nil {
+		t.Fatalf("Grade: %v", err)
+	}
+	if attempt.Passed == nil || *attempt.Passed {
+		t.Fatalf("got passed %v, want false", attempt.Passed)
+	}
+	want := "Correct answer: B) I saw it last night."
+	if attempt.AgentFeedback != want {
+		t.Errorf("got feedback %q, want %q", attempt.AgentFeedback, want)
+	}
+}
+
 func TestGradeOpenItemCallsModelAndLogsMistakeOnFail(t *testing.T) {
 	db := testDB(t)
 

@@ -1,31 +1,92 @@
 package templates
 
 import (
+	"context"
 	"fmt"
-
-	"vekr/internal/models"
+	"net/url"
 )
 
-templ NotesShow(node models.Node, topic *models.Topic, contentHTML string) {
-	@layoutFor(node.ID, notesShowContent(node, topic, contentHTML))
+func noteCrumbs(ctx context.Context, view NoteView) []crumb {
+	crumbs := []crumb{dashboardCrumb(ctx)}
+	if view.Topic != nil {
+		return append(crumbs, topicCrumb(view.Topic))
+	}
+	return append(crumbs, crumb{Label: t(ctx, "notes.title"), URL: "/notes"})
 }
 
-templ notesShowContent(node models.Node, topic *models.Topic, contentHTML string) {
-	<div class="bg-surface border border-black/10 rounded-xl p-5">
-		<div class="flex justify-between items-start gap-4 mb-3.5">
-			<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary">{ node.Title }</h2>
-			if topic != nil {
-				<a class="shrink-0 text-xs text-ink-secondary hover:underline" href={ templ.URL(fmt.Sprintf("/topics/%d", topic.ID)) }>{ tData(ctx, "note.topic", map[string]any{"Title": topic.Title}) }</a>
-			} else {
-				<form class="shrink-0" method="POST" action={ templ.URL(fmt.Sprintf("/notes/%d/promote", node.ID)) }>
-					<button class="text-xs text-ink-secondary hover:underline" type="submit">{ t(ctx, "note.promote") }</button>
-				</form>
+func keywordURL(word string) string {
+	return "/notes?" + url.Values{"q": {word}}.Encode()
+}
+
+templ NotesShow(view NoteView) {
+	@layoutFor(view.Node.ID, notesShowContent(view))
+}
+
+templ notesShowContent(view NoteView) {
+	@pageHeader(noteCrumbs(ctx, view), view.Node.Title) {
+		if view.Topic == nil {
+			<form method="POST" action={ templ.URL(fmt.Sprintf("/notes/%d/promote", view.Node.ID)) }>
+				<button class="btn btn-secondary" type="submit" data-turbo-submits-with={ t(ctx, "note.promoting") }>{ t(ctx, "note.promote") }</button>
+			</form>
+		}
+		<a class="btn-quiet" href={ templ.URL(fmt.Sprintf("/notes/%d/edit", view.Node.ID)) }>{ t(ctx, "note.edit") }</a>
+		<form method="POST" action={ templ.URL(fmt.Sprintf("/notes/%d/delete", view.Node.ID)) } data-turbo-confirm={ t(ctx, "note.delete_confirm") }>
+			<button class="btn-quiet hover:text-serious cursor-pointer" type="submit">{ t(ctx, "note.delete") }</button>
+		</form>
+	}
+	<div class="grid grid-cols-1 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-4">
+		<article class="card min-w-0 self-start">
+			<div class="markdown text-[15px]">
+				@templ.Raw(view.ContentHTML)
+			</div>
+			<p class="text-xs text-ink-muted mt-5">{ tData(ctx, "note.created", map[string]any{"Date": relativeDate(ctx, view.Node.CreatedAt)}) }</p>
+		</article>
+
+		<div class="flex flex-col gap-4 min-w-0">
+			if len(view.Keywords) > 0 {
+				<section class="card">
+					<h2 class="section-title mb-3">{ t(ctx, "note.keywords") }</h2>
+					<div class="flex flex-wrap gap-1.5">
+						for _, word := range view.Keywords {
+							<a class="chip hover:border-line-strong hover:text-ink" href={ templ.URL(keywordURL(word)) }>{ word }</a>
+						}
+					</div>
+				</section>
+			}
+
+			<section class="card">
+				<h2 class="section-title mb-3">{ t(ctx, "note.related") }</h2>
+				if len(view.Related) == 0 {
+					@emptyText(t(ctx, "note.related_empty"))
+				} else {
+					<ul>
+						for _, r := range view.Related {
+							<li class="text-sm py-2 border-b border-gridline last:border-b-0">
+								<span class="block text-[11px] text-ink-muted">{ relationLabel(ctx, r) }</span>
+								<a class="hover:underline" href={ templ.URL(fmt.Sprintf("/notes/%d", r.NodeID)) }>{ r.Title }</a>
+							</li>
+						}
+					</ul>
+				}
+			</section>
+
+			if len(view.Chats) > 0 {
+				<section class="card">
+					<h2 class="section-title mb-3">{ t(ctx, "note.chats") }</h2>
+					for _, c := range view.Chats {
+						<a class="flex items-baseline gap-3 text-sm py-2 border-b border-gridline last:border-b-0 group" href={ templ.URL(recentChatURL(c)) }>
+							<span class="flex-1 min-w-0 truncate text-ink-secondary group-hover:text-ink group-hover:underline">
+								if c.Title != "" {
+									{ c.Title }
+								} else {
+									{ t(ctx, "chat.untitled") }
+								}
+							</span>
+							<span class="shrink-0 text-[11px] text-ink-muted">{ relativeDate(ctx, c.LastAt) }</span>
+						</a>
+					}
+				</section>
 			}
 		</div>
-		<div class="markdown text-sm">
-			@templ.Raw(contentHTML)
-		</div>
-		<p class="text-xs text-ink-muted mt-4">{ node.CreatedAt.Format("Jan 2, 2006 15:04") }</p>
-		<a class="inline-block mt-2 text-xs text-accent hover:underline" href="/notes">{ t(ctx, "note.back") }</a>
 	</div>
 }

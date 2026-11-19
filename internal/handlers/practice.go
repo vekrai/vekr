@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -15,13 +16,16 @@ import (
 
 const drillItemLimit = 10
 
+const drillGeneratePerTopic = 3
+
 type PracticeHandler struct {
-	db      *gorm.DB
-	grading *agent.GradingService
+	db       *gorm.DB
+	grading  *agent.GradingService
+	practice *agent.PracticeService
 }
 
-func NewPracticeHandler(db *gorm.DB, grading *agent.GradingService) *PracticeHandler {
-	return &PracticeHandler{db: db, grading: grading}
+func NewPracticeHandler(db *gorm.DB, grading *agent.GradingService, practice *agent.PracticeService) *PracticeHandler {
+	return &PracticeHandler{db: db, grading: grading, practice: practice}
 }
 
 func (h *PracticeHandler) Index(w http.ResponseWriter, r *http.Request) {
@@ -49,21 +53,19 @@ func (h *PracticeHandler) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	templates.PracticeIndex(topic, items, latest, r.URL.RequestURI()).Render(r.Context(), w)
+	templates.PracticeIndex(templates.PracticeView{
+		Topic:    &topic,
+		Items:    items,
+		Latest:   latest,
+		ReturnTo: withoutGraded(r.URL),
+		Graded:   gradedItem(r),
+	}).Render(r.Context(), w)
 }
 
 func (h *PracticeHandler) Drill(w http.ResponseWriter, r *http.Request) {
-	var conceptIDs []uint
-	for _, raw := range r.URL.Query()["concept_id"] {
-		id, err := strconv.ParseUint(raw, 10, 64)
-		if err != nil {
-			http.Error(w, "invalid concept_id", http.StatusBadRequest)
-			return
-		}
-		conceptIDs = append(conceptIDs, uint(id))
-	}
-	if len(conceptIDs) == 0 {
-		http.Error(w, "at least one concept_id is required", http.StatusBadRequest)
+	conceptIDs, err := parseConceptIDs(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -74,7 +76,7 @@ func (h *PracticeHandler) Drill(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var items []models.PracticeItem
-	err := h.db.
+	err = h.db.
 		Where("id IN (SELECT practice_item_id FROM practice_item_concepts WHERE concept_id IN ?)", conceptIDs).
 		Order("topic_id, created_at, id").
 		Find(&items).Error
@@ -82,18 +84,102 @@ func (h *PracticeHandler) Drill(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	items = interleaveByTopic(items)
-	if len(items) > drillItemLimit {
-		items = items[:drillItemLimit]
-	}
-
 	latest, err := h.latestAttempts(items)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	items = drillOrder(items, latest)
+	if len(items) > drillItemLimit {
+		items = items[:drillItemLimit]
+	}
 
-	templates.PracticeDrill(concepts, items, latest, r.URL.RequestURI()).Render(r.Context(), w)
+	topicTitles := map[uint]string{}
+	var topics []models.Topic
+	if err := h.db.Select("id", "title").Find(&topics).Error; err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for _, t := range topics {
+		topicTitles[t.ID] = t.Title
+	}
+
+	templates.PracticeDrill(templates.PracticeView{
+		Concepts:    concepts,
+		ConceptIDs:  conceptIDs,
+		Items:       items,
+		Latest:      latest,
+		TopicTitles: topicTitles,
+		ReturnTo:    withoutGraded(r.URL),
+		Graded:      gradedItem(r),
+	}).Render(r.Context(), w)
+}
+
+func (h *PracticeHandler) GenerateDrill(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	conceptIDs, err := parseConceptIDs(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if _, err := h.practice.GenerateForConcepts(r.Context(), conceptIDs, drillGeneratePerTopic); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	q := url.Values{}
+	for _, id := range conceptIDs {
+		q.Add("concept_id", strconv.FormatUint(uint64(id), 10))
+	}
+	http.Redirect(w, r, "/drill?"+q.Encode(), http.StatusSeeOther)
+}
+
+func parseConceptIDs(r *http.Request) ([]uint, error) {
+	raw := r.URL.Query()["concept_id"]
+	if r.Method == http.MethodPost {
+		raw = r.PostForm["concept_id"]
+	}
+	var ids []uint
+	for _, value := range raw {
+		id, err := strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid concept_id")
+		}
+		ids = append(ids, uint(id))
+	}
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("at least one concept_id is required")
+	}
+	return ids, nil
+}
+
+func drillOrder(items []models.PracticeItem, latest map[uint]models.AttemptResult) []models.PracticeItem {
+	var open, done []models.PracticeItem
+	for _, item := range items {
+		if attempt, ok := latest[item.ID]; ok && attempt.Verdict() == models.VerdictPassed {
+			done = append(done, item)
+			continue
+		}
+		open = append(open, item)
+	}
+	return append(interleaveByTopic(open), interleaveByTopic(done)...)
+}
+
+func gradedItem(r *http.Request) uint {
+	id, _ := strconv.ParseUint(r.URL.Query().Get("graded"), 10, 64)
+	return uint(id)
+}
+
+func withoutGraded(u *url.URL) string {
+	copied := *u
+	q := copied.Query()
+	q.Del("graded")
+	copied.RawQuery = q.Encode()
+	return copied.RequestURI()
 }
 
 func (h *PracticeHandler) Submit(w http.ResponseWriter, r *http.Request) {
@@ -118,11 +204,23 @@ func (h *PracticeHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	if !isLocalPath(returnTo) {
 		returnTo = fmt.Sprintf("/topics/%d/practice", item.TopicID)
 	}
-	http.Redirect(w, r, returnTo, http.StatusSeeOther)
+	http.Redirect(w, r, withGraded(returnTo, item.ID), http.StatusSeeOther)
 }
 
-func (h *PracticeHandler) latestAttempts(items []models.PracticeItem) (map[uint]models.Attempt, error) {
-	latest := make(map[uint]models.Attempt, len(items))
+func withGraded(path string, itemID uint) string {
+	u, err := url.Parse(path)
+	if err != nil {
+		return path
+	}
+	q := u.Query()
+	q.Set("graded", strconv.FormatUint(uint64(itemID), 10))
+	u.RawQuery = q.Encode()
+	u.Fragment = fmt.Sprintf("item-%d", itemID)
+	return u.String()
+}
+
+func (h *PracticeHandler) latestAttempts(items []models.PracticeItem) (map[uint]models.AttemptResult, error) {
+	latest := make(map[uint]models.AttemptResult, len(items))
 	if len(items) == 0 {
 		return latest, nil
 	}
@@ -132,12 +230,13 @@ func (h *PracticeHandler) latestAttempts(items []models.PracticeItem) (map[uint]
 		itemIDs[i] = item.ID
 	}
 
-	var attempts []models.Attempt
+	var attempts []models.AttemptResult
 	err := h.db.Raw(`
-		SELECT DISTINCT ON (practice_item_id) *
-		FROM attempts
-		WHERE practice_item_id IN ?
-		ORDER BY practice_item_id, created_at DESC, id DESC
+		SELECT DISTINCT ON (a.practice_item_id) a.*,
+		       EXISTS (SELECT 1 FROM mistake_log m WHERE m.attempt_id = a.id) AS flagged
+		FROM attempts a
+		WHERE a.practice_item_id IN ?
+		ORDER BY a.practice_item_id, a.created_at DESC, a.id DESC
 	`, itemIDs).Scan(&attempts).Error
 	if err != nil {
 		return nil, err

@@ -11,6 +11,7 @@ type QueueItem struct {
 	TopicID   uint
 	Title     string
 	ItemCount int64
+	Passed    int64
 }
 
 func (q QueueItem) Kind() string {
@@ -26,4 +27,18 @@ type WeakSpot struct {
 	MissCount    int
 	AttemptCount int
 	LastMissedAt *time.Time
+}
+
+type ConceptStat struct {
+	ID           uint
+	Name         string
+	MissCount    int
+	AttemptCount int
+}
+
+type RelatedNote struct {
+	NodeID   uint
+	Title    string
+	Relation string
+	Outgoing bool
 }

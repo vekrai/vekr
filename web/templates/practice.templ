@@ -1,84 +1,132 @@
 package templates
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
 	"vekr/internal/models"
 )
 
-func conceptNames(concepts []models.Concept) string {
-	names := make([]string, len(concepts))
-	for i, c := range concepts {
-		names[i] = c.Name
+func submissionRows(item models.PracticeItem) string {
+	if item.Type == models.PracticeItemTypeCode {
+		return "8"
 	}
-	return strings.Join(names, ", ")
+	return "3"
 }
 
-templ PracticeIndex(topic models.Topic, items []models.PracticeItem, latestAttempts map[uint]models.Attempt, returnTo string) {
-	@layout(practiceIndexContent(topic, items, latestAttempts, returnTo))
+func chosen(a models.AttemptResult, letter string) bool {
+	return strings.EqualFold(strings.TrimSpace(a.Submission), letter)
 }
 
-templ practiceIndexContent(topic models.Topic, items []models.PracticeItem, latestAttempts map[uint]models.Attempt, returnTo string) {
-	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
-		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ tData(ctx, "practice.title", map[string]any{"Title": topic.Title}) }</h2>
-		if len(items) == 0 {
-			<p class="text-xs text-ink-muted">{ t(ctx, "practice.empty") }</p>
-		} else {
-			@practiceItemList(items, latestAttempts, returnTo)
-		}
-		<a class="inline-block mt-3 text-xs text-accent hover:underline" href={ templ.URL(fmt.Sprintf("/topics/%d", topic.ID)) }>{ t(ctx, "practice.back") }</a>
-	</div>
+templ PracticeIndex(view PracticeView) {
+	@layout(practiceIndexContent(view))
 }
 
-templ PracticeDrill(concepts []models.Concept, items []models.PracticeItem, latestAttempts map[uint]models.Attempt, returnTo string) {
-	@layout(practiceDrillContent(concepts, items, latestAttempts, returnTo))
-}
-
-templ practiceDrillContent(concepts []models.Concept, items []models.PracticeItem, latestAttempts map[uint]models.Attempt, returnTo string) {
-	<div class="bg-surface border border-black/10 rounded-xl p-5 mb-4">
-		<h2 class="text-[13px] font-semibold uppercase tracking-wide text-ink-secondary mb-3.5">{ tData(ctx, "drill.title", map[string]any{"Concepts": conceptNames(concepts)}) }</h2>
-		if len(items) == 0 {
-			<p class="text-xs text-ink-muted">{ t(ctx, "drill.empty") }</p>
-		} else {
-			@practiceItemList(items, latestAttempts, returnTo)
-		}
-		<a class="inline-block mt-3 text-xs text-accent hover:underline" href="/">{ t(ctx, "drill.back") }</a>
-	</div>
-}
-
-templ practiceItemList(items []models.PracticeItem, latestAttempts map[uint]models.Attempt, returnTo string) {
-	<div class="flex flex-col gap-4">
-		for _, item := range items {
-			<div class="border border-black/10 rounded-lg p-3">
-				<div class="text-[11px] text-ink-muted uppercase tracking-wide mb-1">{ item.Type }</div>
-				<p class="text-sm mb-2 whitespace-pre-line">{ item.Prompt }</p>
-				if attempt, ok := latestAttempts[item.ID]; ok {
-					<p class="text-xs mb-2">
-						if attempt.Passed != nil && *attempt.Passed {
-							<span class="text-accent">{ t(ctx, "practice.passed") }</span>
-						} else {
-							<span class="text-ink-secondary">{ t(ctx, "practice.not_yet") }</span>
-						}
-						if attempt.AgentFeedback != "" {
-							<span class="text-ink-muted"> — { attempt.AgentFeedback }</span>
-						}
-					</p>
-				}
-				<form method="POST" action={ templ.URL(fmt.Sprintf("/practice_items/%d/attempts", item.ID)) }>
-					<input type="hidden" name="return_to" value={ returnTo }/>
-					<textarea class="block w-full border border-black/10 rounded-lg bg-page p-2 text-sm resize-none outline-none" name="submission" rows="2" placeholder={ submissionPlaceholder(ctx, item) }></textarea>
-					<button class="mt-2 bg-ink text-surface rounded-md py-1.5 px-3.5 text-sm font-semibold" type="submit">{ t(ctx, "practice.submit") }</button>
-				</form>
-			</div>
-		}
-	</div>
-}
-
-func submissionPlaceholder(ctx context.Context, item models.PracticeItem) string {
-	if item.Type == models.PracticeItemTypeMCQ {
-		return t(ctx, "practice.placeholder.mcq")
+templ practiceIndexContent(view PracticeView) {
+	@pageHeader([]crumb{dashboardCrumb(ctx), topicCrumb(view.Topic)}, tData(ctx, "practice.title", map[string]any{"Title": view.Topic.Title}))
+	if len(view.Items) == 0 {
+		<section class="card">
+			@emptyText(t(ctx, "practice.empty"))
+		</section>
+	} else {
+		@practiceItemList(view)
 	}
-	return t(ctx, "practice.placeholder.default")
+}
+
+templ PracticeDrill(view PracticeView) {
+	@layout(practiceDrillContent(view))
+}
+
+templ practiceDrillContent(view PracticeView) {
+	@pageHeader([]crumb{dashboardCrumb(ctx)}, t(ctx, "drill.title")) {
+		<form method="POST" action="/drill/generate">
+			for _, id := range view.ConceptIDs {
+				<input type="hidden" name="concept_id" value={ fmt.Sprintf("%d", id) }/>
+			}
+			<button class="btn btn-secondary" type="submit" data-turbo-submits-with={ t(ctx, "drill.generating") }>{ t(ctx, "drill.generate") }</button>
+		</form>
+	}
+	<div class="flex flex-wrap gap-1.5 -mt-2 mb-5">
+		for _, c := range view.Concepts {
+			<span class="chip">{ humanize(c.Name) }</span>
+		}
+	</div>
+	if len(view.Items) == 0 {
+		<section class="card">
+			@emptyText(t(ctx, "drill.empty"))
+		</section>
+	} else {
+		@practiceItemList(view)
+	}
+}
+
+templ practiceItemList(view PracticeView) {
+	<div class="flex flex-col gap-4 max-w-3xl">
+		for i, item := range view.Items {
+			@practiceItem(view, item, i+1)
+		}
+	</div>
+}
+
+templ practiceItem(view PracticeView, item models.PracticeItem, number int) {
+	{{ latest, attempted := view.Latest[item.ID] }}
+	{{ justGraded := attempted && view.Graded == item.ID }}
+	{{ stem, choices := item.Choices() }}
+	<article id={ fmt.Sprintf("item-%d", item.ID) } class={ "card scroll-mt-6", templ.KV("ring-1 ring-line-strong", justGraded) }
+		if justGraded {
+			data-controller="reveal"
+		}
+	>
+		<div class="flex items-center gap-2 mb-2 text-xs text-ink-muted">
+			<span class="tabular-nums">{ fmt.Sprintf("%d", number) }</span>
+			<span aria-hidden="true">·</span>
+			<span>{ itemTypeLabel(ctx, item.Type) }</span>
+			if title, ok := view.TopicTitles[item.TopicID]; ok {
+				<span aria-hidden="true">·</span>
+				<a class="truncate hover:underline" href={ templ.URL(fmt.Sprintf("/topics/%d", item.TopicID)) }>{ title }</a>
+			}
+			if attempted {
+				<span class={ "ml-auto", verdictClass(latest) }>{ verdictLabel(ctx, latest) }</span>
+			}
+		</div>
+		<p class="text-[15px] leading-relaxed whitespace-pre-line mb-3">{ stem }</p>
+
+		<form method="POST" action={ templ.URL(fmt.Sprintf("/practice_items/%d/attempts", item.ID)) }>
+			<input type="hidden" name="return_to" value={ view.ReturnTo }/>
+			if len(choices) > 0 {
+				<div class="flex flex-col gap-2">
+					for _, c := range choices {
+						<button type="submit" name="submission" value={ c.Letter } data-turbo-submits-with={ t(ctx, "practice.grading") } class={ "flex items-start gap-3 w-full text-left text-sm rounded-lg border px-3 py-2.5 cursor-pointer disabled:cursor-wait", templ.KV("border-line hover:bg-page hover:border-line-strong", !(justGraded && chosen(latest, c.Letter))), templ.KV("border-good bg-good/5", justGraded && chosen(latest, c.Letter) && latest.Verdict() != models.VerdictNotYet), templ.KV("border-serious bg-serious/5", justGraded && chosen(latest, c.Letter) && latest.Verdict() == models.VerdictNotYet) }>
+							<span class="w-5 shrink-0 font-semibold text-ink-secondary">{ c.Letter }</span>
+							<span>{ c.Text }</span>
+						</button>
+					}
+				</div>
+			} else if item.Type == models.PracticeItemTypeFlashcard || item.Type == models.PracticeItemTypeMCQ {
+				<div class="flex gap-2">
+					<input class="field" type="text" name="submission" autocomplete="off" required placeholder={ t(ctx, "practice.placeholder.default") }/>
+					<button class="btn btn-secondary" type="submit" data-turbo-submits-with={ t(ctx, "practice.grading") }>{ t(ctx, "practice.submit") }</button>
+				</div>
+			} else {
+				<textarea class={ "field resize-y", templ.KV("font-mono text-[13px]", item.Type == models.PracticeItemTypeCode) } name="submission" rows={ submissionRows(item) } required placeholder={ t(ctx, "practice.placeholder.default") }></textarea>
+				<button class="btn btn-secondary mt-2" type="submit" data-turbo-submits-with={ t(ctx, "practice.grading") }>{ t(ctx, "practice.submit") }</button>
+			}
+		</form>
+
+		if attempted {
+			<details class="mt-3 group" open?={ justGraded }>
+				<summary class="text-xs text-ink-secondary cursor-pointer select-none hover:text-ink">{ t(ctx, "practice.last_attempt") }</summary>
+				<div class="mt-2 rounded-lg bg-page border border-gridline p-3 text-sm">
+					<div class="text-[11px] uppercase tracking-wide text-ink-muted mb-1">{ t(ctx, "practice.your_answer") }</div>
+					<p class="whitespace-pre-line mb-2">{ latest.Submission }</p>
+					if latest.AgentFeedback != "" {
+						<div class="text-[11px] uppercase tracking-wide text-ink-muted mb-1">{ t(ctx, "practice.feedback") }</div>
+						<div class="markdown text-ink-secondary">
+							@templ.Raw(markdownHTML(latest.AgentFeedback))
+						</div>
+					}
+				</div>
+			</details>
+		}
+	</article>
 }
